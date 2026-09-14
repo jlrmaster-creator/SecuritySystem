@@ -262,13 +262,16 @@ export default function GroupsPage() {
               <div>
                 <div className="form-label" style={{ marginBottom: 8 }}>Solicitudes pendientes · {pendingRequests.length}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {pendingMembers.map(member => (
-                    <div key={member.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10 }}>
-                      <span style={{ flex: 1 }}>{member.displayName || member.email}</span>
-                      <button className="btn btn-teal btn-sm" onClick={() => handleApprove(member.id)}>Aprobar</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => handleReject(member.id)}>Rechazar</button>
+                  {pendingRequests.map(request => {
+                    const member = pendingMembers.find(item => item.id === request.userId)
+                    return (
+                    <div key={request.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10 }}>
+                      <span style={{ flex: 1 }}>{member?.displayName || member?.email || request.userId}</span>
+                      <button className="btn btn-teal btn-sm" onClick={() => handleApprove(request.userId)}>Aprobar</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleReject(request.userId)}>Rechazar</button>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
