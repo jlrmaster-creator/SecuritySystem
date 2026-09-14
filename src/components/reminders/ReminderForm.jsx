@@ -8,7 +8,7 @@ const defaultForm = {
   description: '',
   dateTime: '',
   importance: 'medium',
-  color: '#7C3AED',
+  color: '#0891B2',
   category: 'personal',
   isPermanent: false
 }
@@ -24,7 +24,7 @@ export default function ReminderForm({ initial, onSubmit, onCancel, loading }) {
         description: initial.description || '',
         dateTime: initial.dateTime ? toInputDateTime(initial.dateTime) : '',
         importance: initial.importance || 'medium',
-        color: initial.color || '#7C3AED',
+        color: initial.color || '#0891B2',
         category: initial.category || 'personal',
         isPermanent: initial.isPermanent || false
       })

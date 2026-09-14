@@ -1,35 +1,35 @@
 /* =============================================
-   RECORDATORIOS — DESIGN SYSTEM
-   Dark mode, glassmorphism, mobile-first
+   SECURITYSYSTEM — DESIGN SYSTEM
+   Dark mode, security-focused cyan/amber palette, mobile-first
    ============================================= */
 
 /* ── TOKENS ── */
 :root {
-  --bg-primary: #0F0F1A;
-  --bg-secondary: #16162A;
+  --bg-primary: #07111F;
+  --bg-secondary: #0B1724;
   --bg-card: rgba(255, 255, 255, 0.05);
   --bg-card-hover: rgba(255, 255, 255, 0.08);
   --bg-glass: rgba(255, 255, 255, 0.04);
   --border-glass: rgba(255, 255, 255, 0.10);
   --border-subtle: rgba(255, 255, 255, 0.06);
 
-  --violet: #7C3AED;
-  --violet-light: #9F67FF;
-  --violet-dark: #5B21B6;
-  --violet-glow: rgba(124, 58, 237, 0.35);
-  --teal: #06D6A0;
-  --teal-light: #34EDB9;
-  --teal-dark: #04A87E;
-  --teal-glow: rgba(6, 214, 160, 0.30);
-  --pink: #F72585;
-  --orange: #FB8500;
-  --yellow: #FFB703;
+  --violet: #0891B2;
+  --violet-light: #22D3EE;
+  --violet-dark: #155E75;
+  --violet-glow: rgba(8, 145, 178, 0.35);
+  --teal: #F59E0B;
+  --teal-light: #FBBF24;
+  --teal-dark: #B45309;
+  --teal-glow: rgba(245, 158, 11, 0.30);
+  --pink: #FB7185;
+  --orange: #F97316;
+  --yellow: #FACC15;
   --red: #EF4444;
   --red-glow: rgba(239, 68, 68, 0.30);
 
-  --text-primary: #F1F0FF;
-  --text-secondary: rgba(241, 240, 255, 0.60);
-  --text-muted: rgba(241, 240, 255, 0.35);
+  --text-primary: #E6F7FF;
+  --text-secondary: rgba(230, 247, 255, 0.60);
+  --text-muted: rgba(230, 247, 255, 0.35);
   --text-on-violet: #ffffff;
 
   --radius-sm: 8px;
@@ -129,7 +129,7 @@ small { font-size: 0.8125rem; }
   width: 100%;
   max-width: var(--max-width);
   height: var(--header-height);
-  background: rgba(15, 15, 26, 0.85);
+  background: rgba(7, 17, 31, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-glass);
@@ -172,7 +172,7 @@ small { font-size: 0.8125rem; }
   width: 100%;
   max-width: var(--max-width);
   height: var(--nav-height);
-  background: rgba(15, 15, 26, 0.90);
+  background: rgba(7, 17, 31, 0.90);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-top: 1px solid var(--border-glass);
@@ -397,7 +397,7 @@ small { font-size: 0.8125rem; }
 
 .btn-teal {
   background: linear-gradient(135deg, var(--teal), var(--teal-dark));
-  color: #0F0F1A;
+  color: #07111F;
   padding: 14px 24px;
   box-shadow: var(--shadow-teal);
 }
@@ -590,82 +590,6 @@ input[type="date"] {
   border-color: #fff;
   transform: scale(1.2);
   box-shadow: 0 0 0 2px rgba(255,255,255,0.4);
-}
-
-/* ── CALENDAR ── */
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.calendar-day-header {
-  text-align: center;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 4px 0 8px;
-}
-
-.calendar-day {
-  aspect-ratio: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-  position: relative;
-  min-height: 36px;
-}
-.calendar-day:hover { background: var(--bg-card); }
-.calendar-day.today {
-  background: var(--violet-glow);
-}
-.calendar-day.today .day-number {
-  color: var(--violet-light);
-  font-weight: 700;
-}
-.calendar-day.selected {
-  background: var(--violet);
-}
-.calendar-day.selected .day-number { color: #fff; }
-.calendar-day.other-month .day-number { color: var(--text-muted); }
-.calendar-day.has-events::after {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--teal);
-}
-
-.day-number {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.day-dots {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-  justify-content: center;
-}
-
-.event-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 /* ── IMPORTANCE SELECTOR ── */

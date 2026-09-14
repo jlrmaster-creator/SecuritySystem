@@ -10,7 +10,7 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onShare, show
   const cat = getCategoryById(reminder.category)
   const imp = getImportanceById(reminder.importance)
   const overdue = isOverdue(reminder.dateTime) && reminder.status !== 'completed'
-  const color = reminder.color || '#7C3AED'
+  const color = reminder.color || '#0891B2'
 
   return (
     <>
@@ -27,9 +27,6 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onShare, show
             <div style={{ flex: 1, minWidth: 0 }}>
               {reminder.isPermanent && (
                 <div className="permanent-badge" style={{ marginBottom: 2 }}>♾️ Permanente</div>
-              )}
-              {reminder.calendarEventId && (
-                <div className="permanent-badge" style={{ marginBottom: 2, color: '#4285F4' }}>📅 Calendar</div>
               )}
               {reminder.isShared && (
                 <div className="received-badge" style={{ marginBottom: 4 }}>

@@ -3,9 +3,8 @@ import { useReminders } from '../context/RemindersContext'
 import { logoutUser } from '../services/authService'
 import { useState, useEffect, useMemo } from 'react'
 import { subscribeToUserGroups } from '../services/groupsService'
-import { initGoogleApis, getAccessToken, createCalendarEvent, getConnectionStatus, disconnectGoogle, isGoogleClientConfigured } from '../services/calendarService'
 import Header from '../components/layout/Header'
-import { LogoutIcon, CalIcon } from '../components/shared/Icons'
+import { LogoutIcon } from '../components/shared/Icons'
 import toast from 'react-hot-toast'
 
 export default function ProfilePage() {
@@ -21,46 +20,6 @@ export default function ProfilePage() {
   const ownCount = useMemo(() => reminders.filter(r => !r.isShared).length, [reminders])
   const sharedCount = useMemo(() => reminders.filter(r => r.isShared && r.status === 'accepted').length, [reminders])
   const highCount = useMemo(() => reminders.filter(r => r.importance === 'high' && !r.isShared).length, [reminders])
-
-  const [calendarConnected, setCalendarConnected] = useState(false)
-  const [gsyncing, setGsyncing] = useState(false)
-
-  useEffect(() => {
-    initGoogleApis().then(ok => {
-      if (ok) setCalendarConnected(getConnectionStatus())
-    })
-  }, [])
-
-  const handleCalendarConnect = async () => {
-    try {
-      await getAccessToken()
-      setCalendarConnected(true)
-      toast.success('Google Calendar conectado ✓')
-    } catch (e) {
-      if (e.message !== 'Ventana cerrada por el usuario') {
-        toast.error('Error al conectar: ' + e.message)
-      }
-    }
-  }
-
-  const handleCalendarSyncAll = async () => {
-    setGsyncing(true)
-    let ok = 0, fail = 0
-    for (const r of reminders) {
-      try {
-        await createCalendarEvent(r)
-        ok++
-      } catch { fail++ }
-    }
-    toast.success(`${ok} eventos creados${fail > 0 ? `, ${fail} fallos` : ''}`)
-    setGsyncing(false)
-  }
-
-  const handleCalendarDisconnect = () => {
-    disconnectGoogle()
-    setCalendarConnected(false)
-    toast.success('Google Calendar desconectado')
-  }
 
   const handleLogout = async () => {
     try { await logoutUser() }
@@ -111,43 +70,6 @@ export default function ProfilePage() {
               <div className="stat-value">{highCount}</div>
               <div className="stat-label">Urgentes</div>
             </div>
-          </div>
-
-          {/* Google Calendar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="section-title" style={{ marginBottom: 4 }}>
-              <CalIcon /> Google Calendar
-            </div>
-
-            {!isGoogleClientConfigured() ? (
-              <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: 10 }}>
-                  Para activar la sincronización, configura las APIs de Google en la consola: habilita Google Calendar API y añade VITE_GOOGLE_CLIENT_ID en .env
-                </p>
-              </div>
-            ) : calendarConnected ? (
-              <div className="card" style={{ padding: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ color: 'var(--teal)', fontWeight: 600 }}>✓ Conectado</span>
-                  <button className="btn btn-danger btn-sm" onClick={handleCalendarDisconnect}>
-                    Desconectar
-                  </button>
-                </div>
-                <button className="btn btn-primary btn-full" onClick={handleCalendarSyncAll} disabled={gsyncing}>
-                  {gsyncing ? <span className="spinner" style={{ width: 18, height: 18 }} /> : null}
-                  {gsyncing ? 'Sincronizando...' : `Sincronizar ${reminders.length} eventos`}
-                </button>
-              </div>
-            ) : (
-              <div className="card" style={{ padding: '16px', textAlign: 'center' }}>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-                  Conecta tu Google Calendar para sincronizar tus eventos
-                </p>
-                <button className="btn btn-primary btn-full" onClick={handleCalendarConnect}>
-                  <CalIcon /> Conectar Google Calendar
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Info cards */}

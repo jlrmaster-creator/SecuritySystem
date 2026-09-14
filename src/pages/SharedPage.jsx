@@ -30,7 +30,7 @@ export default function SharedPage() {
   const ReminderRow = ({ r, showActions }) => {
     const cat = getCategoryById(r.category)
     const imp = getImportanceById(r.importance)
-    const color = r.color || '#7C3AED'
+    const color = r.color || '#0891B2'
     return (
       <div className="card reminder-card" style={{ paddingLeft: 20 }}>
         <div className="reminder-card-accent" style={{ background: color }} />

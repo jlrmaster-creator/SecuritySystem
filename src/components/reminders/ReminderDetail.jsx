@@ -2,9 +2,7 @@ import { useMemo, useState } from 'react'
 import { useReminders } from '../../context/RemindersContext'
 import { formatDate, formatTime, isOverdue } from '../../utils/dateUtils'
 import { getCategoryById, getImportanceById, importanceBadgeClass } from '../../utils/colorUtils'
-import { EditIcon, DeleteIcon, ShareIcon, CalIcon } from '../shared/Icons'
-import { createCalendarEvent, deleteCalendarEvent, getAccessToken, getConnectionStatus, initGoogleApis } from '../../services/calendarService'
-import { updateReminder } from '../../services/remindersService'
+import { EditIcon, DeleteIcon, ShareIcon } from '../shared/Icons'
 import Modal from '../shared/Modal'
 import toast from 'react-hot-toast'
 
@@ -20,36 +18,10 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, on
   const cat = getCategoryById(reminder.category)
   const imp = getImportanceById(reminder.importance)
   const overdue = isOverdue(reminder.dateTime)
-  const color = reminder.color || '#7C3AED'
-  const [calAdding, setCalAdding] = useState(false)
-
-  const handleCalAdd = async () => {
-    setCalAdding(true)
-    try {
-      await initGoogleApis()
-      if (!getConnectionStatus()) {
-        await getAccessToken()
-      }
-      const event = await createCalendarEvent(reminder)
-      await updateReminder(reminder.id, { calendarEventId: event.id })
-      toast.success('Añadido a Google Calendar ✓')
-    } catch (e) {
-      const msg = e?.result?.error?.message || e?.message || 'Error desconocido'
-      if (msg.includes('Ventana cerrada')) return
-      toast.error('Error al añadir: ' + msg)
-    }
-    finally { setCalAdding(false) }
-  }
-
+  const color = reminder.color || '#0891B2'
   const handleDelete = () => setConfirmOpen(true)
 
   const handleDeleteConfirm = async () => {
-    if (reminder.calendarEventId) {
-      try {
-        await initGoogleApis()
-        await deleteCalendarEvent(reminder.calendarEventId)
-      } catch {} // ignore calendar errors on delete
-    }
     setConfirmOpen(false)
     onDelete()
   }
@@ -74,7 +46,6 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, on
             </span>
             {cat && <span className="badge badge-category">{cat.label}</span>}
             {reminder.isPermanent && <span className="badge" style={{ background: 'rgba(255,215,0,0.15)', color: '#FFD700' }}>♾️ Permanente</span>}
-            {reminder.calendarEventId && <span className="badge" style={{ background: 'rgba(66,133,244,0.15)', color: '#4285F4' }}><CalIcon /> Calendar</span>}
             {reminder.isShared && <span className="badge badge-shared">Recibido</span>}
           </div>
         </div>
@@ -143,9 +114,6 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, on
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={handleCalAdd} disabled={calAdding || !!reminder.calendarEventId} title={reminder.calendarEventId ? 'Ya añadido a Calendar' : 'Añadir a Google Calendar'}>
-            <CalIcon /> {calAdding ? '...' : reminder.calendarEventId ? '✓ Calendar' : 'Calendar'}
-          </button>
           {!reminder.isShared && (
             <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={onEdit}>
               <EditIcon /> Editar

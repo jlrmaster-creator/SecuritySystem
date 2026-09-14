@@ -5,7 +5,6 @@ import { RemindersProvider, useReminders } from './context/RemindersContext'
 
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
-import CalendarPage from './pages/CalendarPage'
 import SharedPage from './pages/SharedPage'
 import GroupsPage from './pages/GroupsPage'
 import ProfilePage from './pages/ProfilePage'
@@ -18,10 +17,10 @@ const LoadingScreen = () => (
   <div className="loading-page">
     <div style={{
       width: 56, height: 56,
-      background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
+      background: 'linear-gradient(135deg, #0891B2, #164E63)',
       borderRadius: 16,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      boxShadow: '0 4px 24px rgba(124,58,237,0.35)',
+      boxShadow: '0 4px 24px rgba(8,145,178,0.35)',
       marginBottom: 16
     }}>
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
@@ -47,7 +46,6 @@ function AppShell() {
     <div className="app-shell">
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/shared" element={<SharedPage />} />
         <Route path="/groups" element={<GroupsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
@@ -71,8 +69,8 @@ export default function App() {
             toastOptions={{
               duration: 3000,
               style: {
-                background: '#16162A',
-                color: '#F1F0FF',
+                background: '#0B1724',
+                color: '#E6F7FF',
                 border: '1px solid rgba(255,255,255,0.10)',
                 fontFamily: 'Inter, system-ui, sans-serif',
                 fontSize: '0.875rem',
@@ -81,10 +79,10 @@ export default function App() {
                 maxWidth: '360px'
               },
               success: {
-                iconTheme: { primary: '#06D6A0', secondary: '#0F0F1A' }
+                iconTheme: { primary: '#22D3EE', secondary: '#07111F' }
               },
               error: {
-                iconTheme: { primary: '#EF4444', secondary: '#0F0F1A' }
+                iconTheme: { primary: '#EF4444', secondary: '#07111F' }
               }
             }}
           />

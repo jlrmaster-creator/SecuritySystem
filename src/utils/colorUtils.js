@@ -1,5 +1,5 @@
 export const COLORS = [
-  '#7C3AED', '#9F67FF', '#06D6A0', '#F72585',
+  '#0891B2', '#22D3EE', '#F59E0B', '#FB7185',
   '#FB8500', '#FFB703', '#3A86FF', '#FF6B6B',
   '#4ECDC4', '#A8DADC', '#E63946', '#F4A261'
 ]

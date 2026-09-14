@@ -2,7 +2,7 @@
 
 ## Contexto
 
-SecuritySystem es una aplicación web mobile-first de comunicación privada. Mantiene el acceso mediante usuario y contraseña, la mensajería entre usuarios, el calendario y la sincronización autenticada, pero elimina el modelo de grupos abiertos y cualquier notificación externa de mensajes.
+SecuritySystem es una aplicación web mobile-first de comunicación privada. Mantiene el acceso mediante usuario y contraseña y la mensajería entre usuarios, pero elimina el calendario, el modelo de grupos abiertos y cualquier notificación externa de mensajes.
 
 La prioridad es proteger la privacidad: no debe existir un directorio público de usuarios, los datos deben estar limitados por autorización y el cliente debe consultar los mensajes al entrar en la aplicación.
 
@@ -22,12 +22,6 @@ La prioridad es proteger la privacidad: no debe existir un directorio público d
 - El destinatario debe aceptar una solicitud antes de establecer una relación de comunicación.
 - Diferenciar siempre solicitudes pendientes, mensajes propios y mensajes recibidos.
 - No exponer contenido a usuarios que no sean destinatarios autorizados.
-
-### Calendario
-
-- Mantener la vista de calendario y la asociación de eventos a fechas.
-- Los eventos son privados por defecto y pueden compartirse únicamente con contactos o grupos autorizados.
-- Mantener la sincronización con Google Calendar solo cuando el usuario la active expresamente.
 
 ### Grupos privados
 
@@ -78,5 +72,5 @@ La implementación debe incluir o comprobar:
 5. Rechazo y expulsión sin conservar permisos.
 6. Rotación de permisos al cambiar miembros.
 7. Ausencia de FCM, APNs, Web Push y notificaciones locales para mensajes.
-8. Calendario funcional y sin exposición pública.
+8. No existen rutas, integraciones ni notificaciones relacionadas con calendarios.
 9. Ausencia de referencias al nombre anterior del proyecto.

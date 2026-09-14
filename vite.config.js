@@ -20,9 +20,9 @@ export default defineConfig({
       manifest: {
         name: 'SecuritySystem',
         short_name: 'SecuritySystem',
-        description: 'Mensajería privada, calendario y grupos protegidos',
-        theme_color: '#0F0F1A',
-        background_color: '#0F0F1A',
+        description: 'Mensajería privada y grupos protegidos',
+        theme_color: '#07111F',
+        background_color: '#07111F',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
