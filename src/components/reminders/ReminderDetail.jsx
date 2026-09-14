@@ -1,0 +1,180 @@
+import { useMemo, useState } from 'react'
+import { useReminders } from '../../context/RemindersContext'
+import { formatDate, formatTime, isOverdue } from '../../utils/dateUtils'
+import { getCategoryById, getImportanceById, importanceBadgeClass } from '../../utils/colorUtils'
+import { EditIcon, DeleteIcon, ShareIcon, CalIcon } from '../shared/Icons'
+import { createCalendarEvent, deleteCalendarEvent, getAccessToken, getConnectionStatus, initGoogleApis } from '../../services/calendarService'
+import { updateReminder } from '../../services/remindersService'
+import Modal from '../shared/Modal'
+import toast from 'react-hot-toast'
+
+export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, onClose }) {
+  const { sentShares } = useReminders()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const shares = useMemo(() =>
+    !reminder.isShared
+      ? sentShares.filter(s => s.originalReminderId === reminder.id)
+      : [],
+    [sentShares, reminder.id, reminder.isShared]
+  )
+  const cat = getCategoryById(reminder.category)
+  const imp = getImportanceById(reminder.importance)
+  const overdue = isOverdue(reminder.dateTime)
+  const color = reminder.color || '#7C3AED'
+  const [calAdding, setCalAdding] = useState(false)
+
+  const handleCalAdd = async () => {
+    setCalAdding(true)
+    try {
+      await initGoogleApis()
+      if (!getConnectionStatus()) {
+        await getAccessToken()
+      }
+      const event = await createCalendarEvent(reminder)
+      await updateReminder(reminder.id, { calendarEventId: event.id })
+      toast.success('Añadido a Google Calendar ✓')
+    } catch (e) {
+      const msg = e?.result?.error?.message || e?.message || 'Error desconocido'
+      if (msg.includes('Ventana cerrada')) return
+      toast.error('Error al añadir: ' + msg)
+    }
+    finally { setCalAdding(false) }
+  }
+
+  const handleDelete = () => setConfirmOpen(true)
+
+  const handleDeleteConfirm = async () => {
+    if (reminder.calendarEventId) {
+      try {
+        await initGoogleApis()
+        await deleteCalendarEvent(reminder.calendarEventId)
+      } catch {} // ignore calendar errors on delete
+    }
+    setConfirmOpen(false)
+    onDelete()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Color + title */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: 14,
+          background: color, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '1.4rem'
+        }}>
+          {cat?.emoji}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{ fontSize: '1.15rem', marginBottom: 4 }}>{reminder.title}</h2>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <span className={importanceBadgeClass(reminder.importance)}>
+              {imp?.emoji} {imp?.label}
+            </span>
+            {cat && <span className="badge badge-category">{cat.label}</span>}
+            {reminder.isPermanent && <span className="badge" style={{ background: 'rgba(255,215,0,0.15)', color: '#FFD700' }}>♾️ Permanente</span>}
+            {reminder.calendarEventId && <span className="badge" style={{ background: 'rgba(66,133,244,0.15)', color: '#4285F4' }}><CalIcon /> Calendar</span>}
+            {reminder.isShared && <span className="badge badge-shared">Recibido</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Description */}
+      {reminder.description && (
+        <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+            {reminder.description}
+          </p>
+        </div>
+      )}
+
+      {/* Date / time */}
+      <div className="card" style={{ display: 'flex', gap: 16 }}>
+        <div style={{ flex: 1 }}>
+          <div className="form-label">Fecha</div>
+          <div style={{ fontWeight: 600, marginTop: 4 }}>{formatDate(reminder.dateTime)}</div>
+        </div>
+        <div>
+          <div className="form-label">Hora</div>
+          <div style={{ fontWeight: 600, marginTop: 4, color: overdue ? 'var(--red)' : 'inherit' }}>
+            {formatTime(reminder.dateTime)}
+            {overdue && ' · Vencido'}
+          </div>
+        </div>
+      </div>
+
+      {/* Shared info (received) */}
+      {reminder.isShared && (
+        <div style={{ background: 'rgba(247,37,133,0.08)', border: '1px solid rgba(247,37,133,0.2)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--pink)' }}>
+            📨 Enviado por <strong>{reminder.sharedFromName || 'un contacto'}</strong>
+          </p>
+        </div>
+      )}
+
+      {/* Shared info (sent) */}
+      {shares.length > 0 && (
+        <div className="card" style={{ padding: '12px 14px', marginTop: '-8px' }}>
+          <div className="form-label" style={{ marginBottom: 10 }}>Historial de envíos</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {shares.map(s => (
+              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>{s.toUserName || 'Usuario'}</span>
+                <span style={{ 
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: s.status === 'accepted' ? 'rgba(6,214,160,0.1)' : 
+                              s.status === 'rejected' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
+                  color: s.status === 'accepted' ? 'var(--teal)' : 
+                         s.status === 'rejected' ? 'var(--red)' : 'var(--text-muted)' 
+                }}>
+                  {s.status === 'accepted' ? '✓ Aceptado' : 
+                   s.status === 'rejected' ? '✗ Rechazado' : '⏳ Pendiente'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={handleCalAdd} disabled={calAdding || !!reminder.calendarEventId} title={reminder.calendarEventId ? 'Ya añadido a Calendar' : 'Añadir a Google Calendar'}>
+            <CalIcon /> {calAdding ? '...' : reminder.calendarEventId ? '✓ Calendar' : 'Calendar'}
+          </button>
+          {!reminder.isShared && (
+            <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={onEdit}>
+              <EditIcon /> Editar
+            </button>
+          )}
+          {onShare && (
+            <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={onShare}>
+              <ShareIcon /> Compartir
+            </button>
+          )}
+        </div>
+        <button className="btn btn-danger btn-sm" style={{ flex: 1 }} onClick={handleDelete}>
+          <DeleteIcon /> Eliminar
+        </button>
+      </div>
+
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Eliminar mensaje">
+        <p style={{ marginBottom: 20, color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+          ¿Estás seguro de que quieres eliminar "<strong>{reminder.title}</strong>"?
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmOpen(false)}>
+            Cancelar
+          </button>
+          <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDeleteConfirm}>
+            Eliminar
+          </button>
+        </div>
+      </Modal>
+    </div>
+  )
+}

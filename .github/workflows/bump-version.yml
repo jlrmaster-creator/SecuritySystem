@@ -1,0 +1,37 @@
+name: Bump version on push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    if: github.actor != 'github-actions'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Bump version (patch)
+        working-directory: ${{ github.workspace }}
+        run: node scripts/bump-version.js patch
+
+      - name: Commit and push version bump
+        working-directory: ${{ github.workspace }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VERSION=$(node -p "require('./package.json').version")
+          git add package.json
+          git commit -m "chore: bump version to v${VERSION} [skip ci]" || echo "No changes to commit"
+          git push origin main || echo "Nothing to push"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
