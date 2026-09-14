@@ -93,7 +93,7 @@ export default function ProfilePage() {
           <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
             <div style={{ fontSize: '1.5rem', marginBottom: 8 }}>📋</div>
             <div style={{ fontWeight: 700, marginBottom: 4, background: 'linear-gradient(135deg, var(--violet-light), var(--teal))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              SecuritySystem v1.0.0
+              SecuritySystem v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               App de notas personales y grupales con sincronización en tiempo real

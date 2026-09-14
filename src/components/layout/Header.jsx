@@ -15,7 +15,7 @@ export default function Header({ title, left, right }) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <span className="header-title">{title}</span>
-        <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>v1.0.0</span>
+        <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>v{import.meta.env.VITE_APP_VERSION || '1.0.0'}</span>
       </div>
       <div style={{ width: 40, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
         {right ?? (
