@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   subscribeToUserGroups, createGroup, requestToJoinGroup,
-  leaveGroup, getGroupMembers, createGroupInvitation,
+  leaveGroup, deleteGroup, getGroupMembers, createGroupInvitation,
   approveGroupRequest, rejectGroupRequest
 } from '../services/groupsService'
 import { subscribeToMyReminders, shareReminder } from '../services/remindersService'
@@ -46,7 +46,7 @@ export default function GroupsPage() {
       await navigator.clipboard.writeText(inviteToken)
       toast.success('Grupo creado. Token privado copiado')
       setFormOpen(false)
-    } catch { toast.error('Error al crear') } finally { setLoading(false) }
+    } catch (err) { toast.error(err.message || 'Error al crear') } finally { setLoading(false) }
   }
 
   const handleJoin = async (code) => {
@@ -64,7 +64,16 @@ export default function GroupsPage() {
       await leaveGroup(user.uid, group.id)
       setSelectedGroup(null)
       toast.success('Has salido del grupo')
-    } catch { toast.error('Error') }
+    } catch (err) { toast.error(err.message || 'No se pudo salir del grupo') }
+  }
+
+  const handleDelete = async (group) => {
+    if (!window.confirm(`¿Eliminar definitivamente el grupo "${group.name}"?`)) return
+    try {
+      await deleteGroup(group.id)
+      setSelectedGroup(null)
+      toast.success('Grupo eliminado')
+    } catch (err) { toast.error(err.message || 'No se pudo eliminar el grupo') }
   }
 
   const handleCopyCode = (code) => {
@@ -229,9 +238,15 @@ export default function GroupsPage() {
               />
             </div>
 
-            <button className="btn btn-danger" onClick={() => handleLeave(selectedGroup)}>
-              Salir del grupo
-            </button>
+            {user.uid === selectedGroup.createdBy ? (
+              <button className="btn btn-danger" onClick={() => handleDelete(selectedGroup)}>
+                Eliminar grupo
+              </button>
+            ) : (
+              <button className="btn btn-danger" onClick={() => handleLeave(selectedGroup)}>
+                Salir del grupo
+              </button>
+            )}
           </div>
         )}
       </Modal>

@@ -84,12 +84,16 @@ export const rejectGroupRequest = async (groupId, userId) => {
 
 // ── LEAVE GROUP ──────────────────────────────────────────
 export const leaveGroup = async (userId, groupId) => {
-  await updateDoc(doc(db, 'groups', groupId), {
-    members: arrayRemove(userId)
-  })
-  await updateDoc(doc(db, 'users', userId), {
-    groups: arrayRemove(groupId)
-  })
+  const groupSnap = await getDoc(doc(db, 'groups', groupId))
+  if (!groupSnap.exists()) return
+  if (groupSnap.data().createdBy === userId) {
+    throw new Error('El propietario no puede salir; elimina el grupo desde la cuenta del propietario')
+  }
+
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'groups', groupId), { members: arrayRemove(userId) })
+  batch.update(doc(db, 'users', userId), { groups: arrayRemove(groupId) })
+  await batch.commit()
 }
 
 // ── GET GROUPS (real-time) ───────────────────────────────
@@ -133,14 +137,11 @@ export const getGroupById = async (groupId) => {
 export const deleteGroup = async (groupId) => {
   const groupSnap = await getDoc(doc(db, 'groups', groupId))
   if (!groupSnap.exists()) return
-  const { members } = groupSnap.data()
+  const { createdBy } = groupSnap.data()
 
   const batch = writeBatch(db)
-  // Remove group from all members
-  members.forEach(uid => {
-    const userRef = doc(db, 'users', uid)
-    batch.update(userRef, { groups: arrayRemove(groupId) })
-  })
+  // Only the owner's profile can be updated from the client.
+  batch.update(doc(db, 'users', createdBy), { groups: arrayRemove(groupId) })
   batch.delete(doc(db, 'groups', groupId))
   await batch.commit()
 }

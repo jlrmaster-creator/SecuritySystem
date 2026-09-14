@@ -23,9 +23,12 @@ service cloud.firestore {
 
     // User profiles are private; group member details must not be used as a directory.
     match /users/{userId} {
-      allow get: if isAuthenticated() && request.auth.uid == userId;
+      allow get: if isAuthenticated();
       allow list: if false;
-      allow create, update: if isAuthenticated()
+      allow create: if isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId;
+      allow update: if isAuthenticated()
         && request.auth.uid == userId
         && request.resource.data.uid == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
