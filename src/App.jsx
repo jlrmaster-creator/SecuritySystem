@@ -45,11 +45,12 @@ function AppShell() {
   return (
     <div className="app-shell">
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<Navigate to="/profile" replace />} />
+        <Route path="/messages" element={<HomePage />} />
         <Route path="/shared" element={<SharedPage />} />
         <Route path="/groups" element={<GroupsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/profile" replace />} />
       </Routes>
       <BottomNav pendingCount={pendingCount} />
     </div>

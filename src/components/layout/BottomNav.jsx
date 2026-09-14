@@ -3,7 +3,7 @@ import { HomeIcon, GroupIcon, UserIcon } from '../shared/Icons'
 
 export default function BottomNav({ pendingCount = 0 }) {
   const navItems = [
-    { to: '/', label: 'Mensajes', Icon: HomeIcon },
+    { to: '/messages', label: 'Mensajes', Icon: HomeIcon },
     { to: '/groups', label: 'Grupos', Icon: GroupIcon },
     { to: '/profile', label: 'Perfil', Icon: UserIcon },
   ]
