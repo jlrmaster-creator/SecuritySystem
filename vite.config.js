@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   base: '/SecuritySystem/',
   define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version || '1.3.0')
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version || '1.0.0')
   },
   plugins: [
     react(),
