@@ -35,9 +35,26 @@ export default function GroupsPage() {
 
   useEffect(() => {
     if (!selectedGroup) return
-    getGroupMembers(selectedGroup.members).then(setGroupMembers)
-    getGroupMembers(selectedGroup.pendingMembers || []).then(setPendingMembers)
+    let active = true
+    Promise.all([
+      getGroupMembers(selectedGroup.members || []),
+      getGroupMembers(selectedGroup.pendingMembers || [])
+    ]).then(([members, pending]) => {
+      if (!active) return
+      setGroupMembers(members)
+      setPendingMembers(pending)
+    }).catch(err => {
+      if (active) toast.error(err.message || 'No se pudieron cargar los miembros')
+    })
+    return () => { active = false }
   }, [selectedGroup])
+
+  // Keep an open detail modal in sync with a new access request.
+  useEffect(() => {
+    if (!selectedGroup) return
+    const latestGroup = groups.find(group => group.id === selectedGroup.id)
+    if (latestGroup && latestGroup !== selectedGroup) setSelectedGroup(latestGroup)
+  }, [groups, selectedGroup])
 
   const handleCreate = async (name, desc) => {
     setLoading(true)
@@ -176,6 +193,11 @@ export default function GroupsPage() {
                       {g.members?.length || 0} miembro{g.members?.length !== 1 ? 's' : ''}
                     </div>
                   </div>
+                  {g.createdBy === user.uid && g.pendingMembers?.length > 0 && (
+                    <span className="badge" style={{ background: 'var(--teal-glow)', color: 'var(--teal-light)' }}>
+                      {g.pendingMembers.length}
+                    </span>
+                  )}
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                 </div>
               ))}
