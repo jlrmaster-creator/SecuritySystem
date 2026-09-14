@@ -28,13 +28,6 @@ export const createGroup = async (userId, name, description = '') => {
     createdAt: serverTimestamp()
   })
   const { inviteToken, expiresAt } = await createGroupInvitation(ref.id, userId)
-  await setDoc(doc(db, 'groupInvitations', inviteToken), {
-    groupId: ref.id,
-    createdBy: userId,
-    expiresAt,
-    used: false,
-    createdAt: serverTimestamp()
-  })
   // Add group to user's profile
   await updateDoc(doc(db, 'users', userId), {
     groups: arrayUnion(ref.id)

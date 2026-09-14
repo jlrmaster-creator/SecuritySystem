@@ -2,62 +2,121 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: never expose the complete user directory
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isGroupMember(groupId) {
+      return isAuthenticated()
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+    }
+
+    function isGroupAdmin(groupId) {
+      return isAuthenticated()
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.admins;
+    }
+
+    function groupContainsUsers(groupId, firstUserId, secondUserId) {
+      let group = get(/databases/$(database)/documents/groups/$(groupId)).data;
+      return firstUserId in group.members && secondUserId in group.members;
+    }
+
+    // User profiles are private; group member details must not be used as a directory.
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow get: if isAuthenticated() && request.auth.uid == userId;
+      allow list: if false;
+      allow create, update: if isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'groups', 'email', 'uid', 'createdAt'
+        ]);
+      allow delete: if false;
     }
 
     // High-entropy, single-use invitations. A token only creates a pending request.
     match /groupInvitations/{token} {
-      allow get: if request.auth != null;
-      allow create: if request.auth != null
+      allow get: if isAuthenticated();
+      allow create: if isAuthenticated()
         && request.resource.data.createdBy == request.auth.uid
         && (
           get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.createdBy == request.auth.uid ||
           request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.admins
-        );
-      allow update: if request.auth != null
+        )
+        && request.resource.data.used == false
+        && request.resource.data.expiresAt > request.time;
+      allow update: if isAuthenticated()
         && resource.data.used == false
         && request.resource.data.used == true
-        && request.resource.data.usedBy == request.auth.uid;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
+        && request.resource.data.usedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedBy', 'usedAt']);
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.createdBy;
     }
 
     // Groups: membership is granted only by an administrator.
     match /groups/{groupId} {
-      allow get: if request.auth != null
+      allow get: if isAuthenticated()
         && (request.auth.uid in resource.data.members || request.auth.uid == resource.data.createdBy);
-      allow list: if request.auth != null && request.auth.uid in resource.data.members;
-      allow create: if request.auth != null
+      allow list: if isAuthenticated() && request.auth.uid in resource.data.members;
+      allow create: if isAuthenticated()
         && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.members == [request.auth.uid];
-      allow update: if request.auth != null && (
-        request.auth.uid == resource.data.createdBy ||
-        request.auth.uid in resource.data.admins ||
+        && request.resource.data.members == [request.auth.uid]
+        && request.resource.data.admins == [request.auth.uid]
+        && request.resource.data.pendingMembers == [];
+      allow update: if isAuthenticated() && (
+        (
+          (request.auth.uid == resource.data.createdBy || request.auth.uid in resource.data.admins)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'description', 'members', 'admins', 'pendingMembers'
+          ])
+        ) ||
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pendingMembers']) &&
-          request.auth.uid in request.resource.data.pendingMembers
+          request.auth.uid in request.resource.data.pendingMembers &&
+          request.resource.data.pendingMembers.size() == resource.data.pendingMembers.size() + 1 &&
+          request.resource.data.pendingMembers.hasAll(resource.data.pendingMembers)
+        ) ||
+        (
+          request.auth.uid in resource.data.members &&
+          !(request.auth.uid in request.resource.data.members) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
         )
       );
-      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.createdBy;
     }
 
-    // Reminders: owner or recipient can read/write
+    // Messages/events: sender and recipient must be members of the declared group.
     match /reminders/{reminderId} {
-      allow read: if request.auth != null && (
+      allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.ownerId ||
         request.auth.uid in resource.data.get('sharedWith', [])
       );
-      allow create: if request.auth != null && (
-        request.auth.uid == request.resource.data.ownerId ||
-        (request.resource.data.isShared == true && request.auth.uid == request.resource.data.sharedFrom)
+      allow create: if isAuthenticated() && (
+        (
+          request.auth.uid == request.resource.data.ownerId &&
+          request.resource.data.isShared == false
+        ) ||
+        (
+          request.resource.data.isShared == true &&
+          request.auth.uid == request.resource.data.sharedFrom &&
+          groupContainsUsers(
+            request.resource.data.groupId,
+            request.auth.uid,
+            request.resource.data.ownerId
+          )
+        )
       );
-      allow update: if request.auth != null && (
-        request.auth.uid == resource.data.ownerId ||
-        (resource.data.isShared == true && request.auth.uid == resource.data.sharedFrom)
+      allow update: if isAuthenticated() && (
+        (
+          request.auth.uid == resource.data.ownerId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        ) ||
+        (
+          request.auth.uid == resource.data.sharedFrom &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharedReminderId', 'updatedAt'])
+        )
       );
-      allow delete: if request.auth != null && (
+      allow delete: if isAuthenticated() && (
         request.auth.uid == resource.data.ownerId ||
         (resource.data.isShared == true && request.auth.uid == resource.data.sharedFrom)
       );
@@ -65,14 +124,20 @@ service cloud.firestore {
 
     // Shared reminders log
     match /sharedReminders/{shareId} {
-      allow read: if request.auth != null && (
+      allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.fromUserId ||
         request.auth.uid == resource.data.toUserId
       );
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.fromUserId;
-      allow update: if request.auth != null && (
-        request.auth.uid == resource.data.toUserId
-      );
+      allow create: if isAuthenticated()
+        && request.auth.uid == request.resource.data.fromUserId
+        && groupContainsUsers(
+          request.resource.data.groupId,
+          request.resource.data.fromUserId,
+          request.resource.data.toUserId
+        );
+      allow update: if isAuthenticated()
+        && request.auth.uid == resource.data.toUserId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
     }
 
   }
