@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Modal from '../shared/Modal'
 import ReminderDetail from './ReminderDetail'
 
-export default function ReminderCard({ reminder, onEdit, onDelete }) {
+export default function ReminderCard({ reminder, onEdit, onDelete, onReply }) {
   const [detailOpen, setDetailOpen] = useState(false)
 
   return (
@@ -38,6 +38,7 @@ export default function ReminderCard({ reminder, onEdit, onDelete }) {
           reminder={reminder}
           onEdit={() => { setDetailOpen(false); onEdit(reminder) }}
           onDelete={() => { setDetailOpen(false); onDelete(reminder.id) }}
+          onReply={onReply ? () => { setDetailOpen(false); onReply(reminder) } : null}
           onClose={() => setDetailOpen(false)}
         />
       </Modal>

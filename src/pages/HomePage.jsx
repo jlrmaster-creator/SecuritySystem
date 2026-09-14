@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useReminders } from '../context/RemindersContext'
 import { subscribeToUserGroups } from '../services/groupsService'
-import { createReminder, deleteReminder, sendMessageToGroup, updateReminder } from '../services/remindersService'
+import { createReminder, deleteReminder, replyToMessage, sendMessageToGroup, updateReminder } from '../services/remindersService'
 import ReminderCard from '../components/reminders/ReminderCard'
 import ReminderForm from '../components/reminders/ReminderForm'
 import Modal from '../components/shared/Modal'
@@ -16,6 +16,7 @@ export default function HomePage() {
   const [groups, setGroups] = useState([])
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
+  const [replyTarget, setReplyTarget] = useState(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -23,15 +24,33 @@ export default function HomePage() {
     return subscribeToUserGroups(user.uid, setGroups)
   }, [user])
 
-  const ownMessages = useMemo(() => reminders.filter(message => !message.isShared), [reminders])
-  const receivedMessages = useMemo(
-    () => reminders.filter(message => message.isShared && message.status === 'accepted'),
+  const messages = useMemo(
+    () => reminders.filter(message => !message.isShared || message.status === 'accepted'),
     [reminders]
   )
 
   const closeForm = () => {
     setFormOpen(false)
     setEditTarget(null)
+    setReplyTarget(null)
+  }
+
+  const handleReply = async (data) => {
+    const group = groups.find(item => item.id === replyTarget?.groupId)
+    if (!group) {
+      toast.error('El grupo de este mensaje ya no está disponible')
+      return
+    }
+    setLoading(true)
+    try {
+      await replyToMessage(user.uid, data, replyTarget, group)
+      toast.success('Respuesta enviada')
+      closeForm()
+    } catch (error) {
+      toast.error(error.message || 'No se pudo enviar la respuesta')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (data) => {
@@ -75,13 +94,34 @@ export default function HomePage() {
     }
   }
 
-  const renderMessages = (messages) => (
-    <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {messages.map(message => (
-        <ReminderCard key={message.id} reminder={message} onEdit={setEditTarget} onDelete={handleDelete} />
-      ))}
+  const renderMessage = (message, nested = false) => (
+    <div key={message.id} style={nested ? { marginLeft: 18, borderLeft: '2px solid var(--violet)', paddingLeft: 10 } : undefined}>
+      <ReminderCard
+        reminder={message}
+        onEdit={setEditTarget}
+        onDelete={handleDelete}
+        onReply={message.groupId ? setReplyTarget : null}
+      />
     </div>
   )
+
+  const renderMessages = (messages) => {
+    const roots = messages.filter(message => !message.parentId)
+    return (
+      <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {roots.map(root => (
+          <div key={root.id}>
+            {renderMessage(root)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+              {messages
+                .filter(message => message.threadId === root.threadId && message.parentId)
+                .map(message => renderMessage(message, true))}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <>
@@ -91,16 +131,10 @@ export default function HomePage() {
       />
       <div className="page-content">
         <div className="page-inner" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {ownMessages.length > 0 && (
+          {messages.length > 0 && (
             <section>
-              <div className="section-header"><span className="section-title">Mis mensajes</span></div>
-              {renderMessages(ownMessages)}
-            </section>
-          )}
-          {receivedMessages.length > 0 && (
-            <section>
-              <div className="section-header"><span className="section-title">Recibidos</span></div>
-              {renderMessages(receivedMessages)}
+              <div className="section-header"><span className="section-title">Conversaciones</span></div>
+              {renderMessages(messages)}
             </section>
           )}
           {reminders.length === 0 && (
@@ -112,11 +146,12 @@ export default function HomePage() {
           )}
         </div>
       </div>
-      <Modal open={formOpen || !!editTarget} onClose={closeForm} title={editTarget ? 'Editar mensaje' : 'Nuevo mensaje'}>
+      <Modal open={formOpen || !!editTarget || !!replyTarget} onClose={closeForm} title={editTarget ? 'Editar mensaje' : replyTarget ? 'Responder al mensaje' : 'Nuevo mensaje'}>
         <ReminderForm
           initial={editTarget}
+          replyTo={replyTarget}
           groups={groups}
-          onSubmit={editTarget ? handleEdit : handleSubmit}
+          onSubmit={editTarget ? handleEdit : replyTarget ? handleReply : handleSubmit}
           onCancel={closeForm}
           loading={loading}
         />

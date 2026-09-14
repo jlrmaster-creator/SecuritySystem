@@ -23,6 +23,11 @@ export const createReminder = async (userId, data) => {
 export const sendMessageToGroup = async (userId, data, group) => {
   const batch = writeBatch(db)
   const ownRef = doc(collection(db, 'reminders'))
+  const threadId = data.threadId || ownRef.id
+  const messageFields = {
+    threadId,
+    ...(data.parentId ? { parentId: data.parentId } : {})
+  }
   batch.set(ownRef, {
     title: data.title,
     description: data.description,
@@ -30,6 +35,7 @@ export const sendMessageToGroup = async (userId, data, group) => {
     isShared: false,
     sharedFrom: null,
     groupId: group.id,
+    ...messageFields,
     status: 'own',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -46,6 +52,7 @@ export const sendMessageToGroup = async (userId, data, group) => {
       sharedFrom: userId,
       sharedFromName: data.sharedFromName || 'Usuario',
       groupId: group.id,
+      ...messageFields,
       originalId: ownRef.id,
       sharedReminderId: logRef.id,
       status: 'accepted',
@@ -64,6 +71,15 @@ export const sendMessageToGroup = async (userId, data, group) => {
   })
   await batch.commit()
   return ownRef.id
+}
+
+export const replyToMessage = async (userId, data, parent, group) => {
+  const threadId = parent.threadId || parent.id
+  return sendMessageToGroup(userId, {
+    ...data,
+    threadId,
+    parentId: parent.id
+  }, group)
 }
 
 // ── READ (real-time) ─────────────────────────────────────

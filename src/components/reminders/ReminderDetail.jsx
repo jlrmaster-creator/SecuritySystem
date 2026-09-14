@@ -4,7 +4,7 @@ import { EditIcon, DeleteIcon, ShareIcon } from '../shared/Icons'
 import Modal from '../shared/Modal'
 import toast from 'react-hot-toast'
 
-export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, onClose }) {
+export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, onClose }) {
   const { sentShares } = useReminders()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const shares = useMemo(() =>
@@ -94,9 +94,9 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, on
               <EditIcon /> Editar
             </button>
           )}
-          {onShare && (
-            <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={onShare}>
-              <ShareIcon /> Compartir
+          {onReply && (
+            <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={onReply}>
+              Responder
             </button>
           )}
         </div>
