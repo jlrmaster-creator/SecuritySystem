@@ -58,17 +58,20 @@ export const requestToJoinGroup = async (userId, token) => {
   if (invite.used || !invite.expiresAt || invite.expiresAt.toMillis() <= Date.now()) {
     throw new Error('La invitación ha caducado o ya ha sido utilizada')
   }
-  const groupSnap = await getDoc(doc(db, 'groups', groupId))
-  if (!groupSnap.exists()) throw new Error('El grupo ya no existe')
 
-  const groupData = groupSnap.data()
-  if (groupData.members.includes(userId)) throw new Error('Ya eres miembro de este grupo')
-
-  await updateDoc(doc(db, 'groupInvitations', token), { used: true, usedBy: userId, usedAt: serverTimestamp() })
-  await updateDoc(doc(db, 'groups', groupId), {
+  // The requester is not a group member yet, so avoid reading the protected
+  // group document. Both updates must succeed together or neither is applied.
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'groupInvitations', token), {
+    used: true,
+    usedBy: userId,
+    usedAt: serverTimestamp()
+  })
+  batch.update(doc(db, 'groups', groupId), {
     pendingMembers: arrayUnion(userId)
   })
-  return { id: groupId, ...groupData, pending: true }
+  await batch.commit()
+  return { id: groupId, pending: true }
 }
 
 export const approveGroupRequest = async (groupId, userId) => {
