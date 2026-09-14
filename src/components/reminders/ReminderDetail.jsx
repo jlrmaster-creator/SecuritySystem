@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useReminders } from '../../context/RemindersContext'
-import { formatDate, formatTime, isOverdue } from '../../utils/dateUtils'
-import { getCategoryById, getImportanceById, importanceBadgeClass } from '../../utils/colorUtils'
-import { EditIcon, DeleteIcon, ShareIcon } from '../shared/Icons'
+import { EditIcon, DeleteIcon } from '../shared/Icons'
 import Modal from '../shared/Modal'
 import toast from 'react-hot-toast'
 
@@ -15,10 +13,6 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, on
       : [],
     [sentShares, reminder.id, reminder.isShared]
   )
-  const cat = getCategoryById(reminder.category)
-  const imp = getImportanceById(reminder.importance)
-  const overdue = isOverdue(reminder.dateTime)
-  const color = reminder.color || '#0891B2'
   const handleDelete = () => setConfirmOpen(true)
 
   const handleDeleteConfirm = async () => {
@@ -32,20 +26,15 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, on
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
         <div style={{
           width: 52, height: 52, borderRadius: 14,
-          background: color, flexShrink: 0,
+          background: 'var(--violet)', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '1.4rem'
         }}>
-          {cat?.emoji}
+          💬
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 style={{ fontSize: '1.15rem', marginBottom: 4 }}>{reminder.title}</h2>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <span className={importanceBadgeClass(reminder.importance)}>
-              {imp?.emoji} {imp?.label}
-            </span>
-            {cat && <span className="badge badge-category">{cat.label}</span>}
-            {reminder.isPermanent && <span className="badge" style={{ background: 'rgba(255,215,0,0.15)', color: '#FFD700' }}>♾️ Permanente</span>}
             {reminder.isShared && <span className="badge badge-shared">Recibido</span>}
           </div>
         </div>
@@ -60,20 +49,6 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onShare, on
         </div>
       )}
 
-      {/* Date / time */}
-      <div className="card" style={{ display: 'flex', gap: 16 }}>
-        <div style={{ flex: 1 }}>
-          <div className="form-label">Fecha</div>
-          <div style={{ fontWeight: 600, marginTop: 4 }}>{formatDate(reminder.dateTime)}</div>
-        </div>
-        <div>
-          <div className="form-label">Hora</div>
-          <div style={{ fontWeight: 600, marginTop: 4, color: overdue ? 'var(--red)' : 'inherit' }}>
-            {formatTime(reminder.dateTime)}
-            {overdue && ' · Vencido'}
-          </div>
-        </div>
-      </div>
 
       {/* Shared info (received) */}
       {reminder.isShared && (

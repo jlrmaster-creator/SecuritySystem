@@ -19,7 +19,6 @@ export default function ProfilePage() {
 
   const ownCount = useMemo(() => reminders.filter(r => !r.isShared).length, [reminders])
   const sharedCount = useMemo(() => reminders.filter(r => r.isShared && r.status === 'accepted').length, [reminders])
-  const highCount = useMemo(() => reminders.filter(r => r.importance === 'high' && !r.isShared).length, [reminders])
 
   const handleLogout = async () => {
     try { await logoutUser() }
@@ -67,8 +66,8 @@ export default function ProfilePage() {
               <div className="stat-label">Grupos</div>
             </div>
             <div className="stat-card">
-              <div className="stat-value">{highCount}</div>
-              <div className="stat-label">Urgentes</div>
+              <div className="stat-value">{sharedCount}</div>
+              <div className="stat-label">Recibidos</div>
             </div>
           </div>
 

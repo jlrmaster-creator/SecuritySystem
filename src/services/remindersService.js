@@ -1,5 +1,5 @@
 import {
-  collection, doc, addDoc, updateDoc, deleteDoc,
+  collection, doc, addDoc, updateDoc, deleteDoc, writeBatch,
   query, where, orderBy, onSnapshot, serverTimestamp,
   getDoc
 } from 'firebase/firestore'
@@ -8,7 +8,8 @@ import { db } from './firebase'
 // ── CREATE ──────────────────────────────────────────────
 export const createReminder = async (userId, data) => {
   const ref = await addDoc(collection(db, 'reminders'), {
-    ...data,
+    title: data.title,
+    description: data.description,
     ownerId: userId,
     isShared: false,
     sharedFrom: null,
@@ -19,12 +20,57 @@ export const createReminder = async (userId, data) => {
   return ref.id
 }
 
+export const sendMessageToGroup = async (userId, data, group) => {
+  const batch = writeBatch(db)
+  const ownRef = doc(collection(db, 'reminders'))
+  batch.set(ownRef, {
+    title: data.title,
+    description: data.description,
+    ownerId: userId,
+    isShared: false,
+    sharedFrom: null,
+    groupId: group.id,
+    status: 'own',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  })
+
+  group.members.filter(memberId => memberId !== userId).forEach(memberId => {
+    const reminderRef = doc(collection(db, 'reminders'))
+    const logRef = doc(collection(db, 'sharedReminders'))
+    batch.set(reminderRef, {
+      title: data.title,
+      description: data.description,
+      ownerId: memberId,
+      isShared: true,
+      sharedFrom: userId,
+      sharedFromName: data.sharedFromName || 'Usuario',
+      groupId: group.id,
+      originalId: ownRef.id,
+      sharedReminderId: logRef.id,
+      status: 'accepted',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    })
+    batch.set(logRef, {
+      reminderId: reminderRef.id,
+      originalReminderId: ownRef.id,
+      fromUserId: userId,
+      toUserId: memberId,
+      groupId: group.id,
+      status: 'accepted',
+      createdAt: serverTimestamp()
+    })
+  })
+  await batch.commit()
+  return ownRef.id
+}
+
 // ── READ (real-time) ─────────────────────────────────────
 export const subscribeToMyReminders = (userId, callback) => {
   const q = query(
     collection(db, 'reminders'),
-    where('ownerId', '==', userId),
-    orderBy('dateTime', 'asc')
+    where('ownerId', '==', userId)
   )
   return onSnapshot(q, (snap) => {
     const reminders = snap.docs.map(d => ({ id: d.id, ...d.data() }))

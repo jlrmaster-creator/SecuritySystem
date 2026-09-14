@@ -1,9 +1,8 @@
 import { NavLink } from 'react-router-dom'
-import { HomeIcon, ShareIcon, GroupIcon, UserIcon } from '../shared/Icons'
+import { ShareIcon, GroupIcon, UserIcon } from '../shared/Icons'
 
 export default function BottomNav({ pendingCount = 0 }) {
   const navItems = [
-    { to: '/', label: 'Inicio', Icon: HomeIcon },
     { to: '/shared', label: 'Recibidos', Icon: ShareIcon, badge: pendingCount },
     { to: '/groups', label: 'Grupos', Icon: GroupIcon },
     { to: '/profile', label: 'Perfil', Icon: UserIcon },

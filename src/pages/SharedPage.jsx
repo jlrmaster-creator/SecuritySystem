@@ -3,8 +3,6 @@ import { useReminders } from '../context/RemindersContext'
 import { acceptSharedReminder, rejectSharedReminder } from '../services/remindersService'
 import Header from '../components/layout/Header'
 import { CheckIcon, XIcon } from '../components/shared/Icons'
-import { formatDateTime } from '../utils/dateUtils'
-import { getCategoryById, importanceBadgeClass, getImportanceById } from '../utils/colorUtils'
 import toast from 'react-hot-toast'
 
 export default function SharedPage() {
@@ -28,12 +26,9 @@ export default function SharedPage() {
   }
 
   const ReminderRow = ({ r, showActions }) => {
-    const cat = getCategoryById(r.category)
-    const imp = getImportanceById(r.importance)
-    const color = r.color || '#0891B2'
     return (
       <div className="card reminder-card" style={{ paddingLeft: 20 }}>
-        <div className="reminder-card-accent" style={{ background: color }} />
+        <div className="reminder-card-accent" style={{ background: 'var(--violet)' }} />
         <div className="reminder-card-inner">
           <div className="received-badge" style={{ marginBottom: 6 }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -44,14 +39,6 @@ export default function SharedPage() {
               <div className="reminder-title truncate">{r.title}</div>
               {r.description && <div className="reminder-desc">{r.description}</div>}
             </div>
-            <span className={importanceBadgeClass(r.importance)} style={{ flexShrink: 0 }}>{imp?.emoji}</span>
-          </div>
-          <div className="reminder-meta">
-            <span className="reminder-date">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              {formatDateTime(r.dateTime)}
-            </span>
-            {cat && <span className="badge badge-category">{cat.emoji} {cat.label}</span>}
           </div>
           {showActions && (
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
