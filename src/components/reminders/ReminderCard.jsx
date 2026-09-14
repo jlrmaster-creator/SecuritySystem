@@ -13,7 +13,7 @@ export default function ReminderCard({ reminder, onEdit, onDelete }) {
         style={{ paddingLeft: '20px' }}
       >
         {/* Accent bar */}
-        <div className="reminder-card-accent" style={{ background: color }} />
+        <div className="reminder-card-accent" style={{ background: 'var(--violet)' }} />
 
         <div className="reminder-card-inner">
           <div className="reminder-header">

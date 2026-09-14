@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useReminders } from '../../context/RemindersContext'
-import { EditIcon, DeleteIcon } from '../shared/Icons'
+import { EditIcon, DeleteIcon, ShareIcon } from '../shared/Icons'
 import Modal from '../shared/Modal'
 import toast from 'react-hot-toast'
 
