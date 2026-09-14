@@ -8,6 +8,7 @@ import ReminderForm from '../components/reminders/ReminderForm'
 import Modal from '../components/shared/Modal'
 import Header from '../components/layout/Header'
 import { PlusIcon } from '../components/shared/Icons'
+import { COLORS } from '../utils/colorUtils'
 import toast from 'react-hot-toast'
 
 export default function HomePage() {
@@ -18,6 +19,7 @@ export default function HomePage() {
   const [editTarget, setEditTarget] = useState(null)
   const [replyTarget, setReplyTarget] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [collapsedThreads, setCollapsedThreads] = useState({})
 
   useEffect(() => {
     if (!user) return
@@ -94,13 +96,19 @@ export default function HomePage() {
     }
   }
 
-  const renderMessage = (message, nested = false) => (
-    <div key={message.id} style={nested ? { marginLeft: 18, borderLeft: '2px solid var(--violet)', paddingLeft: 10 } : undefined}>
+  const getThreadColor = (threadId) => {
+    const value = String(threadId || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
+    return COLORS[value % COLORS.length]
+  }
+
+  const renderMessage = (message, threadColor, nested = false) => (
+    <div key={message.id} style={nested ? { marginLeft: 18, borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
       <ReminderCard
         reminder={message}
         onEdit={setEditTarget}
         onDelete={handleDelete}
         onReply={message.groupId ? setReplyTarget : null}
+        threadColor={threadColor}
       />
     </div>
   )
@@ -110,13 +118,32 @@ export default function HomePage() {
     return (
       <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {roots.map(root => (
-          <div key={root.id}>
-            {renderMessage(root)}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-              {messages
-                .filter(message => message.threadId === root.threadId && message.parentId)
-                .map(message => renderMessage(message, true))}
-            </div>
+          <div key={root.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {(() => {
+              const threadColor = getThreadColor(root.threadId || root.id)
+              const replies = messages.filter(message => message.threadId === root.threadId && message.parentId)
+              const collapsed = collapsedThreads[root.id]
+              return (
+                <>
+                  {renderMessage(root, threadColor)}
+                  {replies.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      style={{ alignSelf: 'flex-start', marginLeft: 18 }}
+                      onClick={() => setCollapsedThreads(current => ({ ...current, [root.id]: !current[root.id] }))}
+                    >
+                      {collapsed ? `Mostrar respuestas (${replies.length})` : `Ocultar respuestas (${replies.length})`}
+                    </button>
+                  )}
+                  {!collapsed && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {replies.map(message => renderMessage(message, threadColor, true))}
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </div>
         ))}
       </div>
