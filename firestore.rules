@@ -56,6 +56,16 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.createdBy;
     }
 
+    match /groupRequests/{requestId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && !(request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.members);
+      allow get, list: if isAuthenticated()
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.admins;
+      allow delete: if isAuthenticated()
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.admins;
+    }
+
     // Groups: membership is granted only by an administrator.
     match /groups/{groupId} {
       allow get: if isAuthenticated()

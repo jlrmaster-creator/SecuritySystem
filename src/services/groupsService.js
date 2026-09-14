@@ -1,5 +1,5 @@
 import {
-  collection, doc, addDoc, updateDoc, setDoc,
+  collection, doc, addDoc, updateDoc, setDoc, deleteDoc,
   query, where, onSnapshot, serverTimestamp,
   getDoc, arrayUnion, arrayRemove, writeBatch, Timestamp
 } from 'firebase/firestore'
@@ -59,30 +59,40 @@ export const requestToJoinGroup = async (userId, token) => {
     throw new Error('La invitación ha caducado o ya ha sido utilizada')
   }
 
-  // The requester is not a group member yet, so avoid reading the protected
-  // group document. Both updates must succeed together or neither is applied.
+  // Keep the request outside the protected group document until an admin approves it.
+  const requestRef = doc(collection(db, 'groupRequests'))
   const batch = writeBatch(db)
+  batch.set(requestRef, {
+    groupId,
+    userId,
+    createdAt: serverTimestamp()
+  })
   batch.update(doc(db, 'groupInvitations', token), {
     used: true,
     usedBy: userId,
     usedAt: serverTimestamp()
   })
-  batch.update(doc(db, 'groups', groupId), {
-    pendingMembers: arrayUnion(userId)
-  })
   await batch.commit()
-  return { id: groupId, pending: true }
+  return { id: groupId, requestId: requestRef.id, pending: true }
 }
 
-export const approveGroupRequest = async (groupId, userId) => {
-  await updateDoc(doc(db, 'groups', groupId), {
+export const approveGroupRequest = async (requestId, groupId, userId) => {
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'groups', groupId), {
     members: arrayUnion(userId),
     pendingMembers: arrayRemove(userId)
   })
+  batch.delete(doc(db, 'groupRequests', requestId))
+  await batch.commit()
 }
 
-export const rejectGroupRequest = async (groupId, userId) => {
-  await updateDoc(doc(db, 'groups', groupId), { pendingMembers: arrayRemove(userId) })
+export const rejectGroupRequest = async (requestId) => {
+  await deleteDoc(doc(db, 'groupRequests', requestId))
+}
+
+export const subscribeToGroupRequests = (groupId, callback) => {
+  const q = query(collection(db, 'groupRequests'), where('groupId', '==', groupId))
+  return onSnapshot(q, callback, console.error)
 }
 
 // ── LEAVE GROUP ──────────────────────────────────────────

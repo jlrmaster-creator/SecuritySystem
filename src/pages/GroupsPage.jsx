@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import {
   subscribeToUserGroups, createGroup, requestToJoinGroup,
   leaveGroup, deleteGroup, getGroupMembers, createGroupInvitation,
-  approveGroupRequest, rejectGroupRequest
+  approveGroupRequest, rejectGroupRequest, subscribeToGroupRequests
 } from '../services/groupsService'
 import { subscribeToMyReminders, shareReminder } from '../services/remindersService'
 import Header from '../components/layout/Header'
@@ -21,6 +21,7 @@ export default function GroupsPage() {
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [groupMembers, setGroupMembers] = useState([])
   const [pendingMembers, setPendingMembers] = useState([])
+  const [pendingRequests, setPendingRequests] = useState([])
   const [shareModal, setShareModal] = useState(null) // { member, group }
   const [loading, setLoading] = useState(false)
   const [shareReminderId, setShareReminderId] = useState('')
@@ -36,9 +37,14 @@ export default function GroupsPage() {
   useEffect(() => {
     if (!selectedGroup) return
     let active = true
+    const stopRequests = user.uid === selectedGroup.createdBy
+      ? subscribeToGroupRequests(selectedGroup.id, snapshot => {
+          if (active) setPendingRequests(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
+        })
+      : () => {}
     Promise.all([
       getGroupMembers(selectedGroup.members || []),
-      getGroupMembers(selectedGroup.pendingMembers || [])
+      getGroupMembers((selectedGroup.pendingMembers || []))
     ]).then(([members, pending]) => {
       if (!active) return
       setGroupMembers(members)
@@ -46,8 +52,22 @@ export default function GroupsPage() {
     }).catch(err => {
       if (active) toast.error(err.message || 'No se pudieron cargar los miembros')
     })
-    return () => { active = false }
+    return () => { active = false; stopRequests() }
   }, [selectedGroup])
+
+  useEffect(() => {
+    if (!selectedGroup || pendingRequests.length === 0) {
+      setPendingMembers([])
+      return
+    }
+    let active = true
+    getGroupMembers(pendingRequests.map(request => request.userId)).then(members => {
+      if (active) setPendingMembers(members)
+    }).catch(err => {
+      if (active) toast.error(err.message || 'No se pudieron cargar las solicitudes')
+    })
+    return () => { active = false }
+  }, [pendingRequests, selectedGroup])
 
   // Keep an open detail modal in sync with a new access request.
   useEffect(() => {
@@ -108,16 +128,21 @@ export default function GroupsPage() {
 
   const handleApprove = async (memberId) => {
     try {
-      await approveGroupRequest(selectedGroup.id, memberId)
-      setSelectedGroup(group => ({ ...group, members: [...(group.members || []), memberId], pendingMembers: (group.pendingMembers || []).filter(id => id !== memberId) }))
+      const request = pendingRequests.find(item => item.userId === memberId)
+      if (!request) return
+      await approveGroupRequest(request.id, selectedGroup.id, memberId)
+      setPendingRequests(items => items.filter(item => item.id !== request.id))
+      setSelectedGroup(group => ({ ...group, members: [...(group.members || []), memberId] }))
       toast.success('Solicitud aprobada')
     } catch (err) { toast.error(err.message || 'No se pudo aprobar la solicitud') }
   }
 
   const handleReject = async (memberId) => {
     try {
-      await rejectGroupRequest(selectedGroup.id, memberId)
-      setSelectedGroup(group => ({ ...group, pendingMembers: (group.pendingMembers || []).filter(id => id !== memberId) }))
+      const request = pendingRequests.find(item => item.userId === memberId)
+      if (!request) return
+      await rejectGroupRequest(request.id)
+      setPendingRequests(items => items.filter(item => item.id !== request.id))
       toast.success('Solicitud rechazada')
     } catch (err) { toast.error(err.message || 'No se pudo rechazar la solicitud') }
   }
@@ -193,9 +218,9 @@ export default function GroupsPage() {
                       {g.members?.length || 0} miembro{g.members?.length !== 1 ? 's' : ''}
                     </div>
                   </div>
-                  {g.createdBy === user.uid && g.pendingMembers?.length > 0 && (
+                  {g.createdBy === user.uid && pendingRequests.some(request => request.groupId === g.id) && (
                     <span className="badge" style={{ background: 'var(--teal-glow)', color: 'var(--teal-light)' }}>
-                      {g.pendingMembers.length}
+                      {pendingRequests.filter(request => request.groupId === g.id).length}
                     </span>
                   )}
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -233,9 +258,9 @@ export default function GroupsPage() {
               </div>}
             </div>
 
-            {user.uid === selectedGroup.createdBy && pendingMembers.length > 0 && (
+            {user.uid === selectedGroup.createdBy && pendingRequests.length > 0 && (
               <div>
-                <div className="form-label" style={{ marginBottom: 8 }}>Solicitudes pendientes · {pendingMembers.length}</div>
+                <div className="form-label" style={{ marginBottom: 8 }}>Solicitudes pendientes · {pendingRequests.length}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {pendingMembers.map(member => (
                     <div key={member.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10 }}>
