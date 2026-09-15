@@ -210,6 +210,8 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharedReminderId', 'updatedAt'])
           )
         );
+      allow delete: if isAuthenticated()
+        && isGroupMember(resource.data.groupId);
     }
 
   }

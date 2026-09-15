@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useReminders } from '../context/RemindersContext'
 import { subscribeToUserGroups } from '../services/groupsService'
-import { createReminder, deleteReminder, markThreadAsRead, replyToMessage, sendMessageToGroup, updateReminder } from '../services/remindersService'
+import { createReminder, deleteMessageThread, markThreadAsRead, replyToMessage, sendMessageToGroup, updateReminder } from '../services/remindersService'
 import ReminderCard from '../components/reminders/ReminderCard'
 import ReminderForm from '../components/reminders/ReminderForm'
 import Modal from '../components/shared/Modal'
@@ -107,10 +107,10 @@ export default function HomePage() {
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (message) => {
     try {
-      await deleteReminder(id)
-      toast.success('Mensaje eliminado')
+      await deleteMessageThread(message)
+      toast.success(message.groupId ? 'Conversación eliminada' : 'Mensaje eliminado')
     } catch (error) {
       toast.error(error.message || 'No se pudo eliminar el mensaje')
     }

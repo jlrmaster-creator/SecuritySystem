@@ -50,7 +50,7 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOp
         <ReminderDetail
           reminder={reminder}
           onEdit={isOwn ? () => { setDetailOpen(false); onEdit(reminder) } : null}
-          onDelete={canDelete ? () => { setDetailOpen(false); onDelete(reminder.id) } : null}
+          onDelete={canDelete ? () => { setDetailOpen(false); onDelete(reminder) } : null}
           onReply={onReply ? () => { setDetailOpen(false); onReply(reminder) } : null}
           canEdit={isOwn}
           canDelete={canDelete}

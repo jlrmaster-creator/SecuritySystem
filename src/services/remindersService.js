@@ -1,7 +1,7 @@
 import {
   collection, doc, addDoc, updateDoc, deleteDoc, writeBatch,
   query, where, orderBy, onSnapshot, serverTimestamp,
-  getDoc, deleteField
+  getDoc, getDocs, deleteField
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -152,6 +152,33 @@ export const updateReminder = async (reminderId, data) => {
 // ── DELETE ───────────────────────────────────────────────
 export const deleteReminder = async (reminderId) => {
   await deleteDoc(doc(db, 'reminders', reminderId))
+}
+
+export const deleteMessageThread = async (reminder) => {
+  if (!reminder.groupId) {
+    await deleteReminder(reminder.id)
+    return
+  }
+
+  const threadId = reminder.threadId || reminder.id
+  const remindersQuery = query(
+    collection(db, 'reminders'),
+    where('groupId', '==', reminder.groupId),
+    where('threadId', '==', threadId)
+  )
+  const sharesQuery = query(
+    collection(db, 'sharedReminders'),
+    where('groupId', '==', reminder.groupId),
+    where('threadId', '==', threadId)
+  )
+  const [remindersSnapshot, sharesSnapshot] = await Promise.all([
+    getDocs(remindersQuery),
+    getDocs(sharesQuery)
+  ])
+  const batch = writeBatch(db)
+  remindersSnapshot.docs.forEach(item => batch.delete(item.ref))
+  sharesSnapshot.docs.forEach(item => batch.delete(item.ref))
+  await batch.commit()
 }
 
 // ── SHARE ────────────────────────────────────────────────
