@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Modal from '../shared/Modal'
 import ReminderDetail from './ReminderDetail'
 
-export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor }) {
+export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor, isOwn }) {
   const [detailOpen, setDetailOpen] = useState(false)
 
   return (
@@ -29,6 +29,18 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOp
                 <div className="reminder-desc">{reminder.description}</div>
               )}
             </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              {onReply && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={(event) => { event.stopPropagation(); onReply(reminder) }}
+                >
+                  Responder
+                </button>
+              )}
+              {isOwn && <span className="badge" style={{ marginLeft: 'auto', color: 'var(--text-muted)' }}>Tuyo</span>}
+            </div>
           </div>
         </div>
       </div>
@@ -39,6 +51,8 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOp
           onEdit={() => { setDetailOpen(false); onEdit(reminder) }}
           onDelete={() => { setDetailOpen(false); onDelete(reminder.id) }}
           onReply={onReply ? () => { setDetailOpen(false); onReply(reminder) } : null}
+          canEdit={isOwn}
+          canDelete={isOwn}
           onClose={() => setDetailOpen(false)}
         />
       </Modal>

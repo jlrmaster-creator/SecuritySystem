@@ -4,7 +4,7 @@ import { EditIcon, DeleteIcon, ShareIcon } from '../shared/Icons'
 import Modal from '../shared/Modal'
 import toast from 'react-hot-toast'
 
-export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, onClose }) {
+export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, canEdit = false, canDelete = false, onClose }) {
   const { sentShares } = useReminders()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const shares = useMemo(() =>
@@ -89,7 +89,7 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, on
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          {!reminder.isShared && (
+          {canEdit && (
             <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={onEdit}>
               <EditIcon /> Editar
             </button>
@@ -100,9 +100,11 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, on
             </button>
           )}
         </div>
-        <button className="btn btn-danger btn-sm" style={{ flex: 1 }} onClick={handleDelete}>
-          <DeleteIcon /> Eliminar
-        </button>
+        {canDelete && (
+          <button className="btn btn-danger btn-sm" style={{ flex: 1 }} onClick={handleDelete}>
+            <DeleteIcon /> Eliminar
+          </button>
+        )}
       </div>
 
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Eliminar mensaje">

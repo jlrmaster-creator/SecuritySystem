@@ -18,6 +18,9 @@ export default function HomePage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [replyTarget, setReplyTarget] = useState(null)
+  const [replyText, setReplyText] = useState('')
+  const [sendingReply, setSendingReply] = useState(false)
+  const [sentThread, setSentThread] = useState(null)
   const [loading, setLoading] = useState(false)
   const [collapsedThreads, setCollapsedThreads] = useState({})
   const [readThreads, setReadThreads] = useState({})
@@ -44,24 +47,31 @@ export default function HomePage() {
   const closeForm = () => {
     setFormOpen(false)
     setEditTarget(null)
-    setReplyTarget(null)
   }
 
-  const handleReply = async (data) => {
+  const handleReply = async (event) => {
+    event.preventDefault()
+    if (!replyTarget || !replyText.trim()) return
     const group = groups.find(item => item.id === replyTarget?.groupId)
     if (!group) {
       toast.error('El grupo de este mensaje ya no está disponible')
       return
     }
-    setLoading(true)
+    setSendingReply(true)
     try {
-      await replyToMessage(user.uid, data, replyTarget, group)
+      await replyToMessage(user.uid, {
+        title: `Re: ${replyTarget.title}`,
+        description: replyText.trim(),
+        sharedFromName: user.displayName || 'Usuario'
+      }, replyTarget, group)
+      setReplyText('')
+      setSentThread(replyTarget.threadId || replyTarget.id)
       toast.success('Respuesta enviada')
-      closeForm()
+      window.setTimeout(() => setSentThread(null), 2500)
     } catch (error) {
       toast.error(error.message || 'No se pudo enviar la respuesta')
     } finally {
-      setLoading(false)
+      setSendingReply(false)
     }
   }
 
@@ -127,8 +137,8 @@ export default function HomePage() {
     })
   }
 
-  const renderMessage = (message, threadColor, nested = false, onOpen) => (
-    <div key={message.id} style={nested ? { marginLeft: 18, borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
+  const renderMessage = (message, threadColor, depth = 0, onOpen) => (
+    <div key={message.id} style={depth > 0 ? { marginLeft: Math.min(depth * 18, 54), borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
       <ReminderCard
         reminder={message}
         onEdit={setEditTarget}
@@ -136,6 +146,7 @@ export default function HomePage() {
         onReply={message.groupId ? setReplyTarget : null}
         onOpen={onOpen}
         threadColor={threadColor}
+        isOwn={message.ownerId === user.uid}
       />
     </div>
   )
@@ -148,7 +159,18 @@ export default function HomePage() {
           <div key={root.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {(() => {
               const threadColor = getThreadColor(root.threadId || root.id)
-              const replies = messages.filter(message => message.threadId === root.threadId && message.parentId)
+              const threadKey = root.threadId || root.id
+              const threadMessages = messages.filter(message => (message.threadId || message.id) === threadKey)
+              const replies = threadMessages.filter(message => message.parentId)
+              const messageKey = message => message.originalId || message.id
+              const children = (parentId, depth = 1) => threadMessages
+                .filter(message => message.parentId === messageKey(parentId))
+                .map(message => (
+                  <div key={message.id}>
+                    {renderMessage(message, threadColor, depth, () => markThreadRead(root.threadId || root.id))}
+                    {children(message, depth + 1)}
+                  </div>
+                ))
               const collapsed = collapsedThreads[root.id]
               const latest = [root, ...replies].sort((a, b) => getMessageTime(b) - getMessageTime(a))[0]
               const latestTime = getMessageTime(latest)
@@ -170,7 +192,7 @@ export default function HomePage() {
                       {unread ? 'Marcar leído' : 'Marcar no leído'}
                     </button>
                   </div>
-                  {renderMessage(root, threadColor, false, () => markThreadRead(root.threadId || root.id))}
+                  {renderMessage(root, threadColor, 0, () => markThreadRead(root.threadId || root.id))}
                   {replies.length > 0 && (
                     <button
                       type="button"
@@ -183,8 +205,33 @@ export default function HomePage() {
                   )}
                   {!collapsed && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {replies.map(message => renderMessage(message, threadColor, true, () => markThreadRead(root.threadId || root.id)))}
+                      {children(root)}
                     </div>
+                  )}
+                  {replyTarget && (replyTarget.threadId || replyTarget.id) === threadKey && (
+                    <form onSubmit={handleReply} style={{ marginLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Respondiendo a <strong>{replyTarget.title}</strong>
+                      </div>
+                      <textarea
+                        className="form-textarea"
+                        rows={3}
+                        placeholder="Escribe tu respuesta..."
+                        value={replyText}
+                        onChange={event => setReplyText(event.target.value)}
+                        disabled={sendingReply}
+                        autoFocus
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {sentThread === (root.threadId || root.id) && (
+                          <span style={{ color: 'var(--teal-light)', fontSize: '0.8rem' }}>✓ Enviado</span>
+                        )}
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setReplyTarget(null); setReplyText('') }}>Cancelar</button>
+                        <button type="submit" className="btn btn-primary btn-sm" disabled={sendingReply || !replyText.trim()}>
+                          {sendingReply ? 'Enviando...' : 'Enviar respuesta'}
+                        </button>
+                      </div>
+                    </form>
                   )}
                 </>
               )
@@ -218,12 +265,11 @@ export default function HomePage() {
           )}
         </div>
       </div>
-      <Modal open={formOpen || !!editTarget || !!replyTarget} onClose={closeForm} title={editTarget ? 'Editar mensaje' : replyTarget ? 'Responder al mensaje' : 'Nuevo mensaje'}>
+      <Modal open={formOpen || !!editTarget} onClose={closeForm} title={editTarget ? 'Editar mensaje' : 'Nuevo mensaje'}>
         <ReminderForm
           initial={editTarget}
-          replyTo={replyTarget}
           groups={groups}
-          onSubmit={editTarget ? handleEdit : replyTarget ? handleReply : handleSubmit}
+          onSubmit={editTarget ? handleEdit : handleSubmit}
           onCancel={closeForm}
           loading={loading}
         />
