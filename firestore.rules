@@ -21,9 +21,34 @@ service cloud.firestore {
       return firstUserId in group.members && secondUserId in group.members;
     }
 
-    // User profiles are private; group member details must not be used as a directory.
+    function canReadMessage(message) {
+      return isAuthenticated() && (
+        (
+          message.get('groupId', null) != null &&
+          isGroupMember(message.groupId)
+        ) ||
+        (
+          message.get('groupId', null) == null &&
+          request.auth.uid == message.ownerId
+        )
+      );
+    }
+
+    function hasValidThreadFields(message) {
+      return message.get('parentId', null) == null ||
+        (
+          message.get('parentId', null) is string &&
+          message.get('threadId', null) is string
+        );
+    }
+
+    // Only the owner can read a profile. Group member names are loaded from
+    // profiles today, but the client never renders their email addresses.
     match /users/{userId} {
-      allow get: if isAuthenticated();
+      allow get: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        request.auth.uid in resource.data.get('groups', [])
+      );
       allow list: if false;
       allow create: if isAuthenticated()
         && request.auth.uid == userId
@@ -102,16 +127,23 @@ service cloud.firestore {
     // Messages/events: sender and recipient must be members of the declared group.
     match /reminders/{reminderId} {
       allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.ownerId ||
-        request.auth.uid in resource.data.get('sharedWith', [])
+        canReadMessage(resource.data)
       );
       allow create: if isAuthenticated() && (
         (
           request.auth.uid == request.resource.data.ownerId &&
-          request.resource.data.isShared == false
+          request.resource.data.isShared == false &&
+          hasValidThreadFields(request.resource.data) &&
+          (
+            request.resource.data.get('groupId', null) == null ||
+            isGroupMember(request.resource.data.groupId)
+          )
         ) ||
         (
           request.resource.data.isShared == true &&
+          request.resource.data.get('groupId', null) != null &&
+          request.resource.data.get('threadId', null) != null &&
+          hasValidThreadFields(request.resource.data) &&
           request.auth.uid == request.resource.data.sharedFrom &&
           groupContainsUsers(
             request.resource.data.groupId,
@@ -123,26 +155,34 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         (
           request.auth.uid == resource.data.ownerId &&
+          canReadMessage(resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'title', 'description', 'status', 'updatedAt'
           ])
         ) ||
         (
           request.auth.uid == resource.data.sharedFrom &&
+          canReadMessage(resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharedReminderId', 'updatedAt'])
         )
       );
       allow delete: if isAuthenticated() && (
-        request.auth.uid == resource.data.ownerId ||
-        (resource.data.isShared == true && request.auth.uid == resource.data.sharedFrom)
+        canReadMessage(resource.data) &&
+        (
+          request.auth.uid == resource.data.ownerId ||
+          (resource.data.isShared == true && request.auth.uid == resource.data.sharedFrom)
+        )
       );
     }
 
     // Shared reminders log
     match /sharedReminders/{shareId} {
       allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.fromUserId ||
-        request.auth.uid == resource.data.toUserId
+        isGroupMember(resource.data.groupId) &&
+        (
+          request.auth.uid == resource.data.fromUserId ||
+          request.auth.uid == resource.data.toUserId
+        )
       );
       allow create: if isAuthenticated()
         && request.auth.uid == request.resource.data.fromUserId

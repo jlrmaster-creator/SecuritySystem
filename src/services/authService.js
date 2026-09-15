@@ -12,6 +12,44 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from './firebase'
 
 const googleProvider = new GoogleAuthProvider()
+const MAX_LOGIN_ATTEMPTS = 5
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000
+const LOGIN_ATTEMPTS_KEY = 'securitysystem-login-attempts'
+
+const normalizeLoginKey = (email) => email.trim().toLowerCase()
+
+const readLoginAttempts = () => {
+  try {
+    return JSON.parse(localStorage.getItem(LOGIN_ATTEMPTS_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+export const getLoginLockout = (email) => {
+  const record = readLoginAttempts()[normalizeLoginKey(email)]
+  if (!record || record.lockedUntil <= Date.now()) return 0
+  return record.lockedUntil
+}
+
+export const recordLoginFailure = (email) => {
+  const key = normalizeLoginKey(email)
+  const attempts = readLoginAttempts()
+  const record = attempts[key] || { count: 0, lockedUntil: 0 }
+  const next = {
+    count: record.count + 1,
+    lockedUntil: record.count + 1 >= MAX_LOGIN_ATTEMPTS ? Date.now() + LOGIN_LOCKOUT_MS : 0
+  }
+  attempts[key] = next
+  localStorage.setItem(LOGIN_ATTEMPTS_KEY, JSON.stringify(attempts))
+  return next.lockedUntil
+}
+
+export const clearLoginFailures = (email) => {
+  const attempts = readLoginAttempts()
+  delete attempts[normalizeLoginKey(email)]
+  localStorage.setItem(LOGIN_ATTEMPTS_KEY, JSON.stringify(attempts))
+}
 
 export const registerUser = async (email, password, displayName) => {
   const cred = await createUserWithEmailAndPassword(auth, email, password)

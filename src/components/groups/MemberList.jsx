@@ -22,9 +22,6 @@ export default function MemberList({ members, currentUserId, onShareToMember, re
                 <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>(Tú)</span>
               )}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }} className="truncate">
-              {member.email}
-            </div>
           </div>
           {onShareToMember && member.id !== currentUserId && (
             <button

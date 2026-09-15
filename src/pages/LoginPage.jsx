@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { loginUser, loginWithGoogle, registerUser, getSignInMethodsForEmail } from '../services/authService'
+import {
+  loginUser, loginWithGoogle, registerUser, getSignInMethodsForEmail,
+  getLoginLockout, recordLoginFailure, clearLoginFailures
+} from '../services/authService'
 import toast from 'react-hot-toast'
 
 const GoogleIcon = () => (
@@ -17,6 +20,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [lockedUntil, setLockedUntil] = useState(0)
+
+  const remainingLockout = Math.max(0, lockedUntil - Date.now())
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -40,10 +46,21 @@ export default function LoginPage() {
         await registerUser(email, password, displayName)
         toast.success('¡Cuenta creada! 🎉')
       } else {
+        const currentLockout = getLoginLockout(email)
+        if (currentLockout) {
+          setLockedUntil(currentLockout)
+          toast.error(`Demasiados intentos. Espera ${Math.ceil((currentLockout - Date.now()) / 60000)} minutos.`)
+          return
+        }
         await loginUser(email, password)
+        clearLoginFailures(email)
         toast.success('¡Bienvenido de vuelta!')
       }
     } catch (err) {
+      if (mode === 'login') {
+        const nextLockout = recordLoginFailure(email)
+        setLockedUntil(nextLockout)
+      }
       const msg = err.code === 'auth/user-not-found' ? 'Usuario no encontrado'
         : err.code === 'auth/wrong-password' ? 'Contraseña incorrecta'
         : err.code === 'auth/email-already-in-use' ? 'Email ya registrado'
@@ -125,7 +142,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
+          <button type="submit" className="btn btn-primary btn-full" disabled={loading || remainingLockout > 0}>
             {loading
               ? <span className="spinner" style={{ width: 20, height: 20, borderWidth: '2px' }} />
               : mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'
