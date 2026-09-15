@@ -171,7 +171,7 @@ export default function HomePage() {
                     {children(message, depth + 1)}
                   </div>
                 ))
-              const collapsed = collapsedThreads[root.id]
+              const collapsed = collapsedThreads[threadKey] === true
               const latest = [root, ...replies].sort((a, b) => getMessageTime(b) - getMessageTime(a))[0]
               const latestTime = getMessageTime(latest)
               const unread = latestTime > (readThreads[root.threadId || root.id] || 0)
@@ -198,7 +198,7 @@ export default function HomePage() {
                       type="button"
                       className="btn btn-ghost btn-sm"
                       style={{ alignSelf: 'flex-start', marginLeft: 18 }}
-                      onClick={() => setCollapsedThreads(current => ({ ...current, [root.id]: !current[root.id] }))}
+                      onClick={() => setCollapsedThreads(current => ({ ...current, [threadKey]: !collapsed }))}
                     >
                       {collapsed ? `Mostrar respuestas (${replies.length})` : `Ocultar respuestas (${replies.length})`}
                     </button>

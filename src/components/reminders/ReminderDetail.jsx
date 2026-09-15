@@ -21,7 +21,27 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, ca
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, position: 'relative' }}>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        aria-label="Cerrar mensaje"
+        title="Cerrar"
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          top: -10,
+          right: -8,
+          width: 34,
+          height: 34,
+          padding: 0,
+          borderRadius: '50%',
+          fontSize: '1.25rem',
+          lineHeight: 1
+        }}
+      >
+        ×
+      </button>
       {/* Color + title */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
         <div style={{
