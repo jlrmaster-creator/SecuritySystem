@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 
 export default function HomePage() {
   const { user } = useAuth()
-  const { reminders, sentShares } = useReminders()
+  const { reminders, sentShares, receivedShares } = useReminders()
   const [groups, setGroups] = useState([])
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
@@ -153,18 +153,19 @@ export default function HomePage() {
     }
   }
 
-  const isMessageRead = message => {
+  const isMessageRead = (message, threadMessages = [message]) => {
     if (message.isShared) return false
     const threadId = message.threadId || message.id
+    const messageIds = new Set(threadMessages.map(item => item.originalId || item.id))
     return sentShares.some(share =>
       share.readAt && (
         share.threadId === threadId ||
-        share.originalReminderId === message.id
+        messageIds.has(share.originalReminderId)
       )
     )
   }
 
-  const renderMessage = (message, threadColor, threadBackground, depth = 0, onOpen) => (
+  const renderMessage = (message, threadColor, threadBackground, threadMessages, depth = 0, onOpen) => (
     <div key={message.id} style={depth > 0 ? { marginLeft: Math.min(depth * 18, 54), borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
       <ReminderCard
         reminder={message}
@@ -174,8 +175,8 @@ export default function HomePage() {
         onOpen={onOpen}
         threadColor={threadColor}
         threadBackground={threadBackground}
-        isOwn={message.ownerId === user.uid}
-        isRead={isMessageRead(message)}
+        isOwn={!message.isShared && message.ownerId === user.uid}
+        isRead={isMessageRead(message, threadMessages)}
       />
     </div>
   )
@@ -197,7 +198,7 @@ export default function HomePage() {
                 .filter(message => message.parentId === messageKey(parentId))
                 .map(message => (
                   <div key={message.id}>
-                    {renderMessage(message, threadColor, threadBackground, depth, () => markThreadRead(root.threadId || root.id))}
+                    {renderMessage(message, threadColor, threadBackground, threadMessages, depth, () => markThreadRead(root.threadId || root.id))}
                     {children(message, depth + 1)}
                   </div>
                 ))
@@ -206,7 +207,17 @@ export default function HomePage() {
                 .filter(message => message.isShared)
                 .sort((a, b) => getMessageTime(b) - getMessageTime(a))[0]
               const latestTime = getMessageTime(latest)
-              const unread = Boolean(latest) && latestTime > (readThreads[root.threadId || root.id] || 0)
+              const messageIds = new Set(threadMessages.map(message => message.originalId || message.id))
+              const remoteReadTime = receivedShares
+                .filter(share => share.readAt && (
+                  share.threadId === threadKey ||
+                  messageIds.has(share.originalReminderId)
+                ))
+                .reduce((latestRead, share) => Math.max(latestRead, getMessageTime({ updatedAt: share.readAt })), 0)
+              const unread = Boolean(latest) && latestTime > Math.max(
+                readThreads[threadKey] || 0,
+                remoteReadTime
+              )
               return (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, padding: '8px 10px 4px' }}>
@@ -233,7 +244,7 @@ export default function HomePage() {
                     flexDirection: 'column',
                     gap: 8
                   }}>
-                    {renderMessage(root, threadColor, threadBackground, 0, () => markThreadRead(root.threadId || root.id))}
+                    {renderMessage(root, threadColor, threadBackground, threadMessages, 0, () => markThreadRead(root.threadId || root.id))}
                   {replies.length > 0 && (
                     <button
                       type="button"

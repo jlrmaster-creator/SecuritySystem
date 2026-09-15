@@ -155,6 +155,7 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         (
           request.auth.uid == resource.data.ownerId &&
+          resource.data.isShared == false &&
           canReadMessage(resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'title', 'description', 'status', 'updatedAt'

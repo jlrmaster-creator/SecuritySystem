@@ -107,6 +107,16 @@ export const subscribeToMySentShares = (userId, callback) => {
   }, console.error)
 }
 
+export const subscribeToMyReceivedShares = (userId, callback) => {
+  const q = query(
+    collection(db, 'sharedReminders'),
+    where('toUserId', '==', userId)
+  )
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  }, console.error)
+}
+
 export const markThreadAsRead = async (messages, read = true) => {
   const updates = messages
     .filter(message => message.isShared && message.sharedReminderId)
