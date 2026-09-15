@@ -82,6 +82,9 @@ export const approveGroupRequest = async (requestId, groupId, userId) => {
     members: arrayUnion(userId),
     pendingMembers: arrayRemove(userId)
   })
+  batch.update(doc(db, 'users', userId), {
+    groups: arrayUnion(groupId)
+  })
   batch.delete(doc(db, 'groupRequests', requestId))
   await batch.commit()
 }
@@ -129,12 +132,20 @@ export const getGroupMembers = async (memberIds) => {
   const cached = membersCache.get(cacheKey)
   if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.data
 
-  const members = (await Promise.all(
+  const results = await Promise.allSettled(
     memberIds.map(async (uid) => {
       const snap = await getDoc(doc(db, 'users', uid))
-      return snap.exists() ? { id: snap.id, ...snap.data() } : null
+      return { uid, profile: snap.exists() ? { id: snap.id, ...snap.data() } : null }
     })
-  )).filter(Boolean)
+  )
+  const members = results
+    .map((result, index) => result.status === 'fulfilled' && result.value.profile
+      ? result.value.profile
+      : { id: memberIds[index], displayName: 'Miembro' })
+  const unavailableMembers = results.filter(result => result.status === 'rejected')
+  if (unavailableMembers.length > 0) {
+    unavailableMembers.forEach(result => console.warn('No se pudo cargar el perfil de un miembro', result.reason))
+  }
 
   membersCache.set(cacheKey, { data: members, ts: Date.now() })
   return members
