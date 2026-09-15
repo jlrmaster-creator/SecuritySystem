@@ -2,14 +2,14 @@ import { useState } from 'react'
 import Modal from '../shared/Modal'
 import ReminderDetail from './ReminderDetail'
 
-export default function ReminderCard({ reminder, onEdit, onDelete, onReply, threadColor }) {
+export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor }) {
   const [detailOpen, setDetailOpen] = useState(false)
 
   return (
     <>
       <div
         className="card clickable reminder-card anim-slide-up"
-        onClick={() => setDetailOpen(true)}
+        onClick={() => { onOpen?.(); setDetailOpen(true) }}
         style={{ paddingLeft: '20px' }}
       >
         {/* Accent bar */}

@@ -78,7 +78,7 @@ export const replyToMessage = async (userId, data, parent, group) => {
   return sendMessageToGroup(userId, {
     ...data,
     threadId,
-    parentId: parent.id
+    parentId: threadId
   }, group)
 }
 

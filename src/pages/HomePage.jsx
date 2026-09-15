@@ -20,10 +20,20 @@ export default function HomePage() {
   const [replyTarget, setReplyTarget] = useState(null)
   const [loading, setLoading] = useState(false)
   const [collapsedThreads, setCollapsedThreads] = useState({})
+  const [readThreads, setReadThreads] = useState({})
 
   useEffect(() => {
     if (!user) return
     return subscribeToUserGroups(user.uid, setGroups)
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    try {
+      setReadThreads(JSON.parse(localStorage.getItem(`securitysystem-read-threads-${user.uid}`) || '{}'))
+    } catch {
+      setReadThreads({})
+    }
   }, [user])
 
   const messages = useMemo(
@@ -101,13 +111,30 @@ export default function HomePage() {
     return COLORS[value % COLORS.length]
   }
 
-  const renderMessage = (message, threadColor, nested = false) => (
+  const getMessageTime = (message) => {
+    const value = message.updatedAt || message.createdAt
+    if (!value) return 0
+    return value.toMillis ? value.toMillis() : new Date(value).getTime()
+  }
+
+  const markThreadRead = (threadId, read = true) => {
+    setReadThreads(current => {
+      const next = { ...current }
+      if (read) next[threadId] = Date.now()
+      else delete next[threadId]
+      localStorage.setItem(`securitysystem-read-threads-${user.uid}`, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const renderMessage = (message, threadColor, nested = false, onOpen) => (
     <div key={message.id} style={nested ? { marginLeft: 18, borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
       <ReminderCard
         reminder={message}
         onEdit={setEditTarget}
         onDelete={handleDelete}
         onReply={message.groupId ? setReplyTarget : null}
+        onOpen={onOpen}
         threadColor={threadColor}
       />
     </div>
@@ -123,9 +150,27 @@ export default function HomePage() {
               const threadColor = getThreadColor(root.threadId || root.id)
               const replies = messages.filter(message => message.threadId === root.threadId && message.parentId)
               const collapsed = collapsedThreads[root.id]
+              const latest = [root, ...replies].sort((a, b) => getMessageTime(b) - getMessageTime(a))[0]
+              const latestTime = getMessageTime(latest)
+              const unread = latestTime > (readThreads[root.threadId || root.id] || 0)
               return (
                 <>
-                  {renderMessage(root, threadColor)}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, paddingLeft: 4 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: threadColor, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {replies.length} {replies.length === 1 ? 'respuesta' : 'respuestas'} · Último: {latest.sharedFromName || (latest.isShared ? 'Miembro del grupo' : 'Tú')}
+                      {latestTime > 0 && ` · ${new Date(latestTime).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+                    </span>
+                    {unread && <span className="badge" style={{ background: 'var(--teal-glow)', color: 'var(--teal-light)' }}>Nuevo</span>}
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => markThreadRead(root.threadId || root.id, !unread)}
+                    >
+                      {unread ? 'Marcar leído' : 'Marcar no leído'}
+                    </button>
+                  </div>
+                  {renderMessage(root, threadColor, false, () => markThreadRead(root.threadId || root.id))}
                   {replies.length > 0 && (
                     <button
                       type="button"
@@ -138,7 +183,7 @@ export default function HomePage() {
                   )}
                   {!collapsed && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {replies.map(message => renderMessage(message, threadColor, true))}
+                      {replies.map(message => renderMessage(message, threadColor, true, () => markThreadRead(root.threadId || root.id)))}
                     </div>
                   )}
                 </>
