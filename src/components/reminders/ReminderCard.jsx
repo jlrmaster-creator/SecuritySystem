@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Modal from '../shared/Modal'
 import ReminderDetail from './ReminderDetail'
 
-export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor, threadBackground, isOwn, isRead }) {
+export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor, threadBackground, isOwn, canDelete, isRead }) {
   const [detailOpen, setDetailOpen] = useState(false)
 
   return (
@@ -50,10 +50,10 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOp
         <ReminderDetail
           reminder={reminder}
           onEdit={isOwn ? () => { setDetailOpen(false); onEdit(reminder) } : null}
-          onDelete={isOwn ? () => { setDetailOpen(false); onDelete(reminder.id) } : null}
+          onDelete={canDelete ? () => { setDetailOpen(false); onDelete(reminder.id) } : null}
           onReply={onReply ? () => { setDetailOpen(false); onReply(reminder) } : null}
           canEdit={isOwn}
-          canDelete={isOwn}
+          canDelete={canDelete}
           onClose={() => setDetailOpen(false)}
         />
       </Modal>

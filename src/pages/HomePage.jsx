@@ -176,13 +176,17 @@ export default function HomePage() {
         threadColor={threadColor}
         threadBackground={threadBackground}
         isOwn={!message.isShared && message.ownerId === user.uid}
+        canDelete={Boolean(message.groupId) || isOwn}
         isRead={isMessageRead(message, threadMessages)}
       />
     </div>
   )
 
   const renderMessages = (messages) => {
-    const roots = messages.filter(message => !message.parentId)
+    const messageKeys = new Set(messages.map(message => message.originalId || message.id))
+    const roots = messages.filter(message =>
+      !message.parentId || !messageKeys.has(message.parentId)
+    )
     return (
       <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {roots.map(root => (

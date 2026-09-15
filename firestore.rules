@@ -170,8 +170,14 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (
         canReadMessage(resource.data) &&
         (
-          request.auth.uid == resource.data.ownerId ||
-          (resource.data.isShared == true && request.auth.uid == resource.data.sharedFrom)
+          (
+            resource.data.get('groupId', null) != null &&
+            isGroupMember(resource.data.groupId)
+          ) ||
+          (
+            resource.data.get('groupId', null) == null &&
+            request.auth.uid == resource.data.ownerId
+          )
         )
       );
     }
