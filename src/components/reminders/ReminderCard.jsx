@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Modal from '../shared/Modal'
 import ReminderDetail from './ReminderDetail'
 
-export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor, isOwn }) {
+export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor, threadBackground, isOwn }) {
   const [detailOpen, setDetailOpen] = useState(false)
 
   return (
@@ -10,7 +10,7 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOp
       <div
         className="card clickable reminder-card anim-slide-up"
         onClick={() => { onOpen?.(); setDetailOpen(true) }}
-        style={{ paddingLeft: '20px' }}
+        style={{ paddingLeft: '20px', background: threadBackground || undefined }}
       >
         {/* Accent bar */}
         <div className="reminder-card-accent" style={{ background: threadColor || 'var(--violet)' }} />

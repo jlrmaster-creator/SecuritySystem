@@ -121,6 +121,14 @@ export default function HomePage() {
     return COLORS[value % COLORS.length]
   }
 
+  const getThreadBackground = (color) => {
+    const value = color.replace('#', '')
+    const red = Number.parseInt(value.slice(0, 2), 16)
+    const green = Number.parseInt(value.slice(2, 4), 16)
+    const blue = Number.parseInt(value.slice(4, 6), 16)
+    return `rgba(${red}, ${green}, ${blue}, 0.08)`
+  }
+
   const getMessageTime = (message) => {
     const value = message.updatedAt || message.createdAt
     if (!value) return 0
@@ -137,7 +145,7 @@ export default function HomePage() {
     })
   }
 
-  const renderMessage = (message, threadColor, depth = 0, onOpen) => (
+  const renderMessage = (message, threadColor, threadBackground, depth = 0, onOpen) => (
     <div key={message.id} style={depth > 0 ? { marginLeft: Math.min(depth * 18, 54), borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
       <ReminderCard
         reminder={message}
@@ -146,6 +154,7 @@ export default function HomePage() {
         onReply={message.groupId ? setReplyTarget : null}
         onOpen={onOpen}
         threadColor={threadColor}
+        threadBackground={threadBackground}
         isOwn={message.ownerId === user.uid}
       />
     </div>
@@ -159,6 +168,7 @@ export default function HomePage() {
           <div key={root.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {(() => {
               const threadColor = getThreadColor(root.threadId || root.id)
+              const threadBackground = getThreadBackground(threadColor)
               const threadKey = root.threadId || root.id
               const threadMessages = messages.filter(message => (message.threadId || message.id) === threadKey)
               const replies = threadMessages.filter(message => message.parentId)
@@ -167,7 +177,7 @@ export default function HomePage() {
                 .filter(message => message.parentId === messageKey(parentId))
                 .map(message => (
                   <div key={message.id}>
-                    {renderMessage(message, threadColor, depth, () => markThreadRead(root.threadId || root.id))}
+                    {renderMessage(message, threadColor, threadBackground, depth, () => markThreadRead(root.threadId || root.id))}
                     {children(message, depth + 1)}
                   </div>
                 ))
@@ -177,7 +187,7 @@ export default function HomePage() {
               const unread = latestTime > (readThreads[root.threadId || root.id] || 0)
               return (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, paddingLeft: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, padding: '8px 10px 4px' }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: threadColor, flexShrink: 0 }} />
                     <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       {replies.length} {replies.length === 1 ? 'respuesta' : 'respuestas'} · Último: {latest.sharedFromName || (latest.isShared ? 'Miembro del grupo' : 'Tú')}
@@ -192,7 +202,16 @@ export default function HomePage() {
                       {unread ? 'Marcar leído' : 'Marcar no leído'}
                     </button>
                   </div>
-                  {renderMessage(root, threadColor, 0, () => markThreadRead(root.threadId || root.id))}
+                  <div style={{
+                    background: threadBackground,
+                    border: `1px solid ${threadColor}33`,
+                    borderRadius: 'var(--radius-lg)',
+                    padding: 8,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8
+                  }}>
+                    {renderMessage(root, threadColor, threadBackground, 0, () => markThreadRead(root.threadId || root.id))}
                   {replies.length > 0 && (
                     <button
                       type="button"
@@ -233,6 +252,7 @@ export default function HomePage() {
                       </div>
                     </form>
                   )}
+                  </div>
                 </>
               )
             })()}
