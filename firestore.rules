@@ -185,11 +185,7 @@ service cloud.firestore {
     // Shared reminders log
     match /sharedReminders/{shareId} {
       allow read: if isAuthenticated() && (
-        isGroupMember(resource.data.groupId) &&
-        (
-          request.auth.uid == resource.data.fromUserId ||
-          request.auth.uid == resource.data.toUserId
-        )
+        isGroupMember(resource.data.groupId)
       );
       allow create: if isAuthenticated()
         && request.auth.uid == request.resource.data.fromUserId
