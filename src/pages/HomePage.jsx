@@ -212,7 +212,7 @@ export default function HomePage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, padding: '8px 10px 4px' }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: threadColor, flexShrink: 0 }} />
                     <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {replies.length} {replies.length === 1 ? 'respuesta' : 'respuestas'} · Último: {latest.sharedFromName || (latest.isShared ? 'Miembro del grupo' : 'Tú')}
+                      {replies.length} {replies.length === 1 ? 'respuesta' : 'respuestas'} · Último: {latest ? (latest.sharedFromName || (latest.isShared ? 'Miembro del grupo' : 'Tú')) : 'Tú'}
                       {latestTime > 0 && ` · ${new Date(latestTime).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
                     </span>
                     {unread && <span className="badge" style={{ background: 'var(--teal-glow)', color: 'var(--teal-light)' }}>Nuevo</span>}
