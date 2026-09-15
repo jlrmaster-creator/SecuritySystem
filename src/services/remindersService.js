@@ -62,6 +62,7 @@ export const sendMessageToGroup = async (userId, data, group) => {
     batch.set(logRef, {
       reminderId: reminderRef.id,
       originalReminderId: ownRef.id,
+      threadId,
       fromUserId: userId,
       toUserId: memberId,
       groupId: group.id,

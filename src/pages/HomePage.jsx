@@ -130,6 +130,7 @@ export default function HomePage() {
   }
 
   const getMessageTime = (message) => {
+    if (!message) return 0
     const value = message.updatedAt || message.createdAt
     if (!value) return 0
     return value.toMillis ? value.toMillis() : new Date(value).getTime()
@@ -137,9 +138,10 @@ export default function HomePage() {
 
   const markThreadRead = async (threadId, read = true) => {
     const threadMessages = messages.filter(message => (message.threadId || message.id) === threadId)
+    const latestTime = Math.max(...threadMessages.map(getMessageTime), 0)
     setReadThreads(current => {
       const next = { ...current }
-      if (read) next[threadId] = Date.now()
+      if (read) next[threadId] = Math.max(Date.now(), latestTime + 1)
       else delete next[threadId]
       localStorage.setItem(`securitysystem-read-threads-${user.uid}`, JSON.stringify(next))
       return next
@@ -151,9 +153,16 @@ export default function HomePage() {
     }
   }
 
-  const isMessageRead = message =>
-    !message.isShared &&
-    sentShares.some(share => share.originalReminderId === message.id && share.readAt)
+  const isMessageRead = message => {
+    if (message.isShared) return false
+    const threadId = message.threadId || message.id
+    return sentShares.some(share =>
+      share.readAt && (
+        share.threadId === threadId ||
+        share.originalReminderId === message.id
+      )
+    )
+  }
 
   const renderMessage = (message, threadColor, threadBackground, depth = 0, onOpen) => (
     <div key={message.id} style={depth > 0 ? { marginLeft: Math.min(depth * 18, 54), borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
@@ -193,9 +202,11 @@ export default function HomePage() {
                   </div>
                 ))
               const collapsed = collapsedThreads[threadKey] === true
-              const latest = [root, ...replies].sort((a, b) => getMessageTime(b) - getMessageTime(a))[0]
+              const latest = [root, ...replies]
+                .filter(message => message.isShared)
+                .sort((a, b) => getMessageTime(b) - getMessageTime(a))[0]
               const latestTime = getMessageTime(latest)
-              const unread = latestTime > (readThreads[root.threadId || root.id] || 0)
+              const unread = Boolean(latest) && latestTime > (readThreads[root.threadId || root.id] || 0)
               return (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, padding: '8px 10px 4px' }}>
