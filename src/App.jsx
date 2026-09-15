@@ -10,6 +10,8 @@ import GroupsPage from './pages/GroupsPage'
 import ProfilePage from './pages/ProfilePage'
 import BottomNav from './components/layout/BottomNav'
 import ReloadPrompt from './components/shared/ReloadPrompt'
+import InstallPrompt from './components/shared/InstallPrompt'
+import OfflineBanner from './components/shared/OfflineBanner'
 import ErrorBoundary from './components/shared/ErrorBoundary'
 
 // Spinner for auth loading
@@ -30,7 +32,9 @@ const LoadingScreen = () => (
         <line x1="9" y1="16" x2="13" y2="16"/>
       </svg>
     </div>
-    <div className="spinner" style={{ width: 28, height: 28 }} />
+    <div className="loading-brand">SecuritySystem</div>
+    <div className="loading-status">Preparando tu espacio seguro...</div>
+    <div className="spinner" style={{ width: 28, height: 28 }} aria-label="Cargando" />
   </div>
 )
 
@@ -64,6 +68,8 @@ export default function App() {
         <ErrorBoundary>
           <BrowserRouter basename={import.meta.env.BASE_URL}>
             <ReloadPrompt />
+            <InstallPrompt />
+            <OfflineBanner />
             <AppShell />
           <Toaster
             position="top-center"

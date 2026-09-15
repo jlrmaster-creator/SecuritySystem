@@ -133,6 +133,9 @@ export default function HomePage() {
     if (!message) return 0
     const value = message.updatedAt || message.createdAt
     if (!value) return 0
+    if (typeof value === 'object' && Number.isFinite(value.seconds)) {
+      return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1000000)
+    }
     return value.toMillis ? value.toMillis() : new Date(value).getTime()
   }
 

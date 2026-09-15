@@ -120,6 +120,55 @@ small { font-size: 0.8125rem; }
   padding: 16px;
 }
 
+.install-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-height) + 12px);
+  transform: translateX(-50%);
+  width: min(calc(100% - 24px), var(--max-width) - 24px);
+  z-index: 220;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  background: rgba(11, 23, 36, 0.96);
+  box-shadow: var(--shadow-lg);
+}
+
+.install-prompt > div { flex: 1; min-width: 0; }
+.install-prompt strong, .install-prompt span { display: block; }
+.install-prompt span { color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px; }
+.install-ios-hint { text-align: right; color: var(--violet-light) !important; }
+.install-prompt-close {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  padding: 4px;
+}
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: var(--max-width);
+  z-index: 230;
+  padding: 7px 12px;
+  background: var(--teal-dark);
+  color: #fff;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.loading-brand { font-weight: 800; letter-spacing: -0.02em; font-size: 1.1rem; }
+.loading-status { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 4px; }
+
+button, .btn, .nav-item { touch-action: manipulation; }
+
 /* ── HEADER ── */
 .app-header {
   position: fixed;

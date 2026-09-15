@@ -13,10 +13,23 @@ export const RemindersProvider = ({ children }) => {
   const [reminders, setReminders] = useState([])
   const [sentShares, setSentShares] = useState([])
   const [receivedShares, setReceivedShares] = useState([])
+  const cacheKey = user ? `securitysystem-cached-messages-${user.uid}` : null
 
   useEffect(() => {
     if (!user) return
-    const unsub1 = subscribeToMyReminders(user.uid, setReminders)
+    const cached = localStorage.getItem(cacheKey)
+    if (cached) {
+      try { setReminders(JSON.parse(cached)) } catch { localStorage.removeItem(cacheKey) }
+    }
+    const updateReminders = next => {
+      setReminders(next)
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(next))
+      } catch (error) {
+        console.warn('No se pudo guardar la caché offline de mensajes', error)
+      }
+    }
+    const unsub1 = subscribeToMyReminders(user.uid, updateReminders)
     const unsub2 = subscribeToMySentShares(user.uid, setSentShares)
     const unsub3 = subscribeToMyReceivedShares(user.uid, setReceivedShares)
     return () => { unsub1(); unsub2(); unsub3() }
