@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useReminders } from '../context/RemindersContext'
 import { subscribeToUserGroups } from '../services/groupsService'
-import { createReminder, deleteReminder, replyToMessage, sendMessageToGroup, updateReminder } from '../services/remindersService'
+import { createReminder, deleteReminder, markThreadAsRead, replyToMessage, sendMessageToGroup, updateReminder } from '../services/remindersService'
 import ReminderCard from '../components/reminders/ReminderCard'
 import ReminderForm from '../components/reminders/ReminderForm'
 import Modal from '../components/shared/Modal'
@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 
 export default function HomePage() {
   const { user } = useAuth()
-  const { reminders } = useReminders()
+  const { reminders, sentShares } = useReminders()
   const [groups, setGroups] = useState([])
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
@@ -135,7 +135,8 @@ export default function HomePage() {
     return value.toMillis ? value.toMillis() : new Date(value).getTime()
   }
 
-  const markThreadRead = (threadId, read = true) => {
+  const markThreadRead = async (threadId, read = true) => {
+    const threadMessages = messages.filter(message => (message.threadId || message.id) === threadId)
     setReadThreads(current => {
       const next = { ...current }
       if (read) next[threadId] = Date.now()
@@ -143,7 +144,16 @@ export default function HomePage() {
       localStorage.setItem(`securitysystem-read-threads-${user.uid}`, JSON.stringify(next))
       return next
     })
+    try {
+      await markThreadAsRead(threadMessages, read)
+    } catch (error) {
+      toast.error('No se pudo sincronizar el estado de lectura')
+    }
   }
+
+  const isMessageRead = message =>
+    !message.isShared &&
+    sentShares.some(share => share.originalReminderId === message.id && share.readAt)
 
   const renderMessage = (message, threadColor, threadBackground, depth = 0, onOpen) => (
     <div key={message.id} style={depth > 0 ? { marginLeft: Math.min(depth * 18, 54), borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
@@ -156,6 +166,7 @@ export default function HomePage() {
         threadColor={threadColor}
         threadBackground={threadBackground}
         isOwn={message.ownerId === user.uid}
+        isRead={isMessageRead(message)}
       />
     </div>
   )

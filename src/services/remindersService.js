@@ -1,7 +1,7 @@
 import {
   collection, doc, addDoc, updateDoc, deleteDoc, writeBatch,
   query, where, orderBy, onSnapshot, serverTimestamp,
-  getDoc
+  getDoc, deleteField
 } from 'firebase/firestore'
 import { db } from './firebase'
 
@@ -104,6 +104,16 @@ export const subscribeToMySentShares = (userId, callback) => {
     const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
     callback(data)
   }, console.error)
+}
+
+export const markThreadAsRead = async (messages, read = true) => {
+  const updates = messages
+    .filter(message => message.isShared && message.sharedReminderId)
+    .map(message => updateDoc(doc(db, 'sharedReminders', message.sharedReminderId), {
+      readAt: read ? serverTimestamp() : deleteField()
+    }))
+
+  await Promise.all(updates)
 }
 
 // Pending shared reminders (not yet accepted)

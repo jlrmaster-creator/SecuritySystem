@@ -192,8 +192,17 @@ service cloud.firestore {
           request.resource.data.toUserId
         );
       allow update: if isAuthenticated()
-        && request.auth.uid == resource.data.toUserId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+        && isGroupMember(resource.data.groupId)
+        && (
+          (
+            request.auth.uid == resource.data.toUserId &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'readAt'])
+          ) ||
+          (
+            request.auth.uid == resource.data.fromUserId &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharedReminderId', 'updatedAt'])
+          )
+        );
     }
 
   }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Modal from '../shared/Modal'
 import ReminderDetail from './ReminderDetail'
 
-export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor, threadBackground, isOwn }) {
+export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor, threadBackground, isOwn, isRead }) {
   const [detailOpen, setDetailOpen] = useState(false)
 
   return (
@@ -40,6 +40,7 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOp
                 </button>
               )}
               {isOwn && <span className="badge" style={{ marginLeft: 'auto', color: 'var(--text-muted)' }}>Tuyo</span>}
+              {isOwn && isRead && <span className="badge" style={{ color: 'var(--teal-light)' }}>Leído</span>}
             </div>
           </div>
         </div>
