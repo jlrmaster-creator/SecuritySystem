@@ -227,13 +227,6 @@ export default function HomePage() {
                       {latestTime > 0 && ` · ${new Date(latestTime).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
                     </span>
                     {unread && <span className="badge" style={{ background: 'var(--teal-glow)', color: 'var(--teal-light)' }}>Nuevo</span>}
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => markThreadRead(root.threadId || root.id, !unread)}
-                    >
-                      {unread ? 'Marcar leído' : 'Marcar no leído'}
-                    </button>
                   </div>
                   <div style={{
                     background: threadBackground,

@@ -37,37 +37,20 @@ export default function GroupsPage() {
   useEffect(() => {
     if (!selectedGroup) return
     let active = true
-    const stopRequests = user.uid === selectedGroup.createdBy
+    const stopRequests = (selectedGroup.admins || []).includes(user.uid)
       ? subscribeToGroupRequests(selectedGroup.id, snapshot => {
           if (active) setPendingRequests(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
         })
       : () => {}
-    Promise.all([
-      getGroupMembers(selectedGroup.members || []),
-      getGroupMembers((selectedGroup.pendingMembers || []))
-    ]).then(([members, pending]) => {
+    getGroupMembers(selectedGroup.members || []).then(members => {
       if (!active) return
       setGroupMembers(members)
-      setPendingMembers(pending)
     }).catch(err => {
       if (active) toast.error(err.message || 'No se pudieron cargar los miembros')
     })
+    setPendingMembers([])
     return () => { active = false; stopRequests() }
   }, [selectedGroup])
-
-  useEffect(() => {
-    if (!selectedGroup || pendingRequests.length === 0) {
-      setPendingMembers([])
-      return
-    }
-    let active = true
-    getGroupMembers(pendingRequests.map(request => request.userId)).then(members => {
-      if (active) setPendingMembers(members)
-    }).catch(err => {
-      if (active) toast.error(err.message || 'No se pudieron cargar las solicitudes')
-    })
-    return () => { active = false }
-  }, [pendingRequests, selectedGroup])
 
   // Keep an open detail modal in sync with a new access request.
   useEffect(() => {
@@ -85,6 +68,11 @@ export default function GroupsPage() {
       setFormOpen(false)
     } catch (err) { toast.error(err.message || 'Error al crear') } finally { setLoading(false) }
   }
+
+  const canManageSelectedGroup = selectedGroup && (
+    selectedGroup.createdBy === user.uid ||
+    (selectedGroup.admins || []).includes(user.uid)
+  )
 
   const handleJoin = async (code) => {
     setLoading(true)
@@ -247,9 +235,11 @@ export default function GroupsPage() {
             {/* Invite code */}
             <div>
               <div className="form-label" style={{ marginBottom: 8 }}>Invitación privada</div>
-              <button className="btn btn-primary btn-full" onClick={handleCreateInvite}>
-                Generar token de un solo uso
-              </button>
+              {canManageSelectedGroup && (
+                <button className="btn btn-primary btn-full" onClick={handleCreateInvite}>
+                  Generar token de un solo uso
+                </button>
+              )}
               {inviteToken && <div className="invite-code-display" onClick={() => handleCopyCode(inviteToken)}>
                 {inviteToken}
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4, letterSpacing: 0 }}>
@@ -258,7 +248,7 @@ export default function GroupsPage() {
               </div>}
             </div>
 
-            {user.uid === selectedGroup.createdBy && pendingRequests.length > 0 && (
+            {canManageSelectedGroup && pendingRequests.length > 0 && (
               <div>
                 <div className="form-label" style={{ marginBottom: 8 }}>Solicitudes pendientes · {pendingRequests.length}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
