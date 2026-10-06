@@ -168,22 +168,25 @@ export default function HomePage() {
     )
   }
 
-  const renderMessage = (message, threadColor, threadBackground, threadMessages, depth = 0, onOpen) => (
-    <div key={message.id} style={depth > 0 ? { marginLeft: Math.min(depth * 18, 54), borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
-      <ReminderCard
-        reminder={message}
-        onEdit={setEditTarget}
-        onDelete={handleDelete}
-        onReply={message.groupId ? setReplyTarget : null}
-        onOpen={onOpen}
-        threadColor={threadColor}
-        threadBackground={threadBackground}
-        isOwn={!message.isShared && message.ownerId === user.uid}
-        canDelete={Boolean(message.groupId) || isOwn}
-        isRead={isMessageRead(message, threadMessages)}
-      />
-    </div>
-  )
+  const renderMessage = (message, threadColor, threadBackground, threadMessages, depth = 0, onOpen) => {
+    const isOwn = !message.isShared && message.ownerId === user.uid
+    return (
+      <div key={message.id} style={depth > 0 ? { marginLeft: Math.min(depth * 18, 54), borderLeft: `2px solid ${threadColor}`, paddingLeft: 10 } : undefined}>
+        <ReminderCard
+          reminder={message}
+          onEdit={setEditTarget}
+          onDelete={handleDelete}
+          onReply={message.groupId ? setReplyTarget : null}
+          onOpen={onOpen}
+          threadColor={threadColor}
+          threadBackground={threadBackground}
+          isOwn={isOwn}
+          canDelete={Boolean(message.groupId) || isOwn}
+          isRead={isMessageRead(message, threadMessages)}
+        />
+      </div>
+    )
+  }
 
   const renderMessages = (messages) => {
     const messageKeys = new Set(messages.map(message => message.originalId || message.id))
