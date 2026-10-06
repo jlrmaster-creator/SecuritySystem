@@ -42,12 +42,21 @@ service cloud.firestore {
         );
     }
 
-    // Only the owner can read a profile. Group member names are loaded from
-    // profiles today, but the client never renders their email addresses.
+    // Only the owner can read a profile, plus any user who already shares at
+    // least one group with them: that is how member names are loaded
+    // (getGroupMembers). The previous check looked for the reader's UID inside
+    // the profile's `groups` list (a list of GROUP ids), so it was always false
+    // and every foreign profile read was denied. The client never renders
+    // email addresses.
     match /users/{userId} {
       allow get: if isAuthenticated() && (
         request.auth.uid == userId ||
-        request.auth.uid in resource.data.get('groups', [])
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data
+            .get('groups', [])
+            .hasAny(resource.data.get('groups', []))
+        )
       );
       allow list: if false;
       allow create: if isAuthenticated()
@@ -184,8 +193,23 @@ service cloud.firestore {
 
     // Shared reminders log
     match /sharedReminders/{shareId} {
+      // Two independent paths, OR-ed in a single statement (same shape as
+      // canReadMessage, which is already proven against list queries):
+      //  · sender/recipient read their own logs. `.get()` is required here: in
+      //    a list request Firestore only knows the fields used in the filters,
+      //    and raw access to `resource.data.groupId` failed the whole query
+      //    with "Property groupId is undefined on object", silencing both
+      //    share subscriptions.
+      //  · members read every log of a thread (deleteMessageThread lists by
+      //    groupId). That branch only resolves when groupId is known — a
+      //    single read, or a list filtered by groupId — never for open queries.
       allow read: if isAuthenticated() && (
-        isGroupMember(resource.data.groupId)
+        request.auth.uid == resource.data.get('fromUserId', null) ||
+        request.auth.uid == resource.data.get('toUserId', null) ||
+        (
+          resource.data.get('groupId', null) is string &&
+          isGroupMember(resource.data.groupId)
+        )
       );
       allow create: if isAuthenticated()
         && request.auth.uid == request.resource.data.fromUserId

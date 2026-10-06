@@ -43,6 +43,24 @@ try {
   pkg.version = newVersion
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
   console.log(`✓ Bumped version: ${oldVer} -> ${newVersion} (${part})`)
+
+  // Keep package-lock.json in sync so `npm ci` (deploy) never sees drift.
+  const lockPath = join(cwd(), 'package-lock.json')
+  if (existsSync(lockPath)) {
+    try {
+      const lock = JSON.parse(readFileSync(lockPath, 'utf8'))
+      const rootPkg = lock.packages && lock.packages['']
+      const needsUpdate = lock.version !== newVersion || (rootPkg && rootPkg.version !== newVersion)
+      if (needsUpdate) {
+        lock.version = newVersion
+        if (rootPkg) rootPkg.version = newVersion
+        writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n')
+        console.log(`✓ Synchronized package-lock.json to ${newVersion}`)
+      }
+    } catch (lockErr) {
+      console.warn('⚠ No se pudo sincronizar package-lock.json:', lockErr.message)
+    }
+  }
 } catch (err) {
   console.error('Error:', err.message)
   process.exit(1)
