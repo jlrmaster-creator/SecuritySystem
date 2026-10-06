@@ -5,6 +5,12 @@ on:
     branches:
       - main
 
+# Sin este bloque el token que usa actions/checkout es de solo lectura: el
+# `git push` fallaba con 403 y quedaba oculto tras `|| echo "Nothing to push"`,
+# así que este workflow nunca llegaba a subir el bump.
+permissions:
+  contents: write
+
 jobs:
   bump-version:
     if: github.actor != 'github-actions'
@@ -32,6 +38,6 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           git add package.json package-lock.json
           git commit -m "chore: bump version to v${VERSION} [skip ci]" || echo "No changes to commit"
-          git push origin main || echo "Nothing to push"
+          git push origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
