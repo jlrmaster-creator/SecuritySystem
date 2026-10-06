@@ -2,8 +2,10 @@ import { useState } from 'react'
 import Modal from '../shared/Modal'
 import ReminderDetail from './ReminderDetail'
 
-export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOpen, threadColor, threadBackground, isOwn, canDelete, isRead }) {
+export default function ReminderCard({ reminder, onEdit, onDelete, onRetract, onReply, onOpen, threadColor, threadBackground, isOwn, canDelete, isRead }) {
   const [detailOpen, setDetailOpen] = useState(false)
+  // Retirar para todos es exclusivo del autor de un mensaje de grupo.
+  const canRetract = isOwn && Boolean(reminder.groupId) && Boolean(onRetract)
 
   return (
     <>
@@ -51,9 +53,11 @@ export default function ReminderCard({ reminder, onEdit, onDelete, onReply, onOp
           reminder={reminder}
           onEdit={isOwn ? () => { setDetailOpen(false); onEdit(reminder) } : null}
           onDelete={canDelete ? () => { setDetailOpen(false); onDelete(reminder) } : null}
+          onRetract={canRetract ? () => { setDetailOpen(false); onRetract(reminder) } : null}
           onReply={onReply ? () => { setDetailOpen(false); onReply(reminder) } : null}
           canEdit={isOwn}
           canDelete={canDelete}
+          canRetract={canRetract}
           onClose={() => setDetailOpen(false)}
         />
       </Modal>

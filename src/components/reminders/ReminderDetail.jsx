@@ -4,7 +4,7 @@ import { EditIcon, DeleteIcon, ShareIcon } from '../shared/Icons'
 import Modal from '../shared/Modal'
 import toast from 'react-hot-toast'
 
-export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, canEdit = false, canDelete = false, onClose }) {
+export default function ReminderDetail({ reminder, onEdit, onDelete, onRetract, onReply, canEdit = false, canDelete = false, canRetract = false, onClose }) {
   const { sentShares } = useReminders()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const shares = useMemo(() =>
@@ -18,6 +18,11 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, ca
   const handleDeleteConfirm = async () => {
     setConfirmOpen(false)
     onDelete()
+  }
+
+  const handleRetractConfirm = () => {
+    setConfirmOpen(false)
+    onRetract?.()
   }
 
   return (
@@ -140,6 +145,19 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, ca
             Eliminar
           </button>
         </div>
+        {canRetract && onRetract && (
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-glass)' }}>
+            <div className="form-label" style={{ marginBottom: 6 }}>Como autor del mensaje</div>
+            <p style={{ marginBottom: 12, color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+              También puedes retirarlo para todo el grupo: se eliminará tu mensaje
+              original y las copias del resto de miembros. Esta acción no se puede
+              deshacer.
+            </p>
+            <button className="btn btn-danger btn-sm" style={{ width: '100%' }} onClick={handleRetractConfirm}>
+              Retirar mensaje para todos
+            </button>
+          </div>
+        )}
       </Modal>
     </div>
   )

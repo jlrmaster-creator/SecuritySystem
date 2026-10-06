@@ -1,9 +1,16 @@
 import {
   collection, doc, addDoc, updateDoc, deleteDoc, writeBatch,
   query, where, orderBy, onSnapshot, serverTimestamp,
-  getDoc, deleteField
+  getDoc, getDocs, deleteField, Timestamp
 } from 'firebase/firestore'
 import { db } from './firebase'
+
+// ── PRIVACIDAD: retención de 7 días ─────────────────────
+// Todo mensaje nuevo lleva `expiresAt`. La política TTL de Firestore (que se
+// configura a mano en la consola de Firebase) borra el documento cuando ese
+// instante pasa; sin esa política activa el campo no hace nada por sí solo.
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+const retentionExpiry = () => Timestamp.fromMillis(Date.now() + RETENTION_MS)
 
 // ── CREATE ──────────────────────────────────────────────
 export const createReminder = async (userId, data) => {
@@ -14,6 +21,7 @@ export const createReminder = async (userId, data) => {
     isShared: false,
     sharedFrom: null,
     status: 'own',
+    expiresAt: retentionExpiry(),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   })
@@ -37,6 +45,7 @@ export const sendMessageToGroup = async (userId, data, group) => {
     groupId: group.id,
     ...messageFields,
     status: 'own',
+    expiresAt: retentionExpiry(),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   })
@@ -56,6 +65,7 @@ export const sendMessageToGroup = async (userId, data, group) => {
       originalId: ownRef.id,
       sharedReminderId: logRef.id,
       status: 'accepted',
+      expiresAt: retentionExpiry(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     })
@@ -67,6 +77,7 @@ export const sendMessageToGroup = async (userId, data, group) => {
       toUserId: memberId,
       groupId: group.id,
       status: 'accepted',
+      expiresAt: retentionExpiry(),
       createdAt: serverTimestamp()
     })
   })
@@ -152,6 +163,34 @@ export const updateReminder = async (reminderId, data) => {
 // ── DELETE ───────────────────────────────────────────────
 export const deleteReminder = async (reminderId) => {
   await deleteDoc(doc(db, 'reminders', reminderId))
+}
+
+// ── RETRACT (retirar el mensaje para todos) ─────────────
+// Solo el autor puede hacerlo. Borra en una sola tanda el mensaje original,
+// las copias que se crearon para cada miembro del grupo y los registros
+// asociados de sharedReminders. Las reglas lo permiten porque el original es
+// del autor (ownerId == uid) y cada copia lleva sharedFrom == uid; cualquier
+// otro miembro sigue sin poder borrar lo que no escribió.
+export const retractMessageForEveryone = async (userId, message) => {
+  if (!message.groupId) throw new Error('Esta acción solo existe en mensajes de grupo')
+  if (message.ownerId !== userId) throw new Error('Solo el autor puede retirar el mensaje')
+
+  const originalId = message.originalId || message.id
+  const copies = await getDocs(query(
+    collection(db, 'reminders'),
+    where('groupId', '==', message.groupId),
+    where('originalId', '==', originalId)
+  ))
+
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'reminders', originalId))
+  copies.docs.forEach(copy => {
+    batch.delete(copy.ref)
+    const logId = copy.data().sharedReminderId
+    if (logId) batch.delete(doc(db, 'sharedReminders', logId))
+  })
+  await batch.commit()
+  return copies.size
 }
 
 // ── SHARE ────────────────────────────────────────────────

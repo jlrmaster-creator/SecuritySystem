@@ -42,6 +42,17 @@ service cloud.firestore {
         );
     }
 
+    // Privacy retention: every new message carries `expiresAt` (7 days) for the
+    // Firestore TTL policy. Older clients may still omit it — the field stays
+    // optional so their writes keep working — but when sent it must be a real
+    // timestamp, otherwise the TTL engine would silently skip that document.
+    function hasValidExpiry(data) {
+      return data.get('expiresAt', null) == null ||
+        (
+          data.get('expiresAt', null) is timestamp
+        );
+    }
+
     // Only the owner can read a profile, plus any user who already shares at
     // least one group with them: that is how member names are loaded
     // (getGroupMembers). The previous check looked for the reader's UID inside
@@ -138,29 +149,31 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         canReadMessage(resource.data)
       );
-      allow create: if isAuthenticated() && (
-        (
-          request.auth.uid == request.resource.data.ownerId &&
-          request.resource.data.isShared == false &&
-          hasValidThreadFields(request.resource.data) &&
+      allow create: if isAuthenticated()
+        && hasValidExpiry(request.resource.data)
+        && (
           (
-            request.resource.data.get('groupId', null) == null ||
-            isGroupMember(request.resource.data.groupId)
+            request.auth.uid == request.resource.data.ownerId &&
+            request.resource.data.isShared == false &&
+            hasValidThreadFields(request.resource.data) &&
+            (
+              request.resource.data.get('groupId', null) == null ||
+              isGroupMember(request.resource.data.groupId)
+            )
+          ) ||
+          (
+            request.resource.data.isShared == true &&
+            request.resource.data.get('groupId', null) != null &&
+            request.resource.data.get('threadId', null) != null &&
+            hasValidThreadFields(request.resource.data) &&
+            request.auth.uid == request.resource.data.sharedFrom &&
+            groupContainsUsers(
+              request.resource.data.groupId,
+              request.auth.uid,
+              request.resource.data.ownerId
+            )
           )
-        ) ||
-        (
-          request.resource.data.isShared == true &&
-          request.resource.data.get('groupId', null) != null &&
-          request.resource.data.get('threadId', null) != null &&
-          hasValidThreadFields(request.resource.data) &&
-          request.auth.uid == request.resource.data.sharedFrom &&
-          groupContainsUsers(
-            request.resource.data.groupId,
-            request.auth.uid,
-            request.resource.data.ownerId
-          )
-        )
-      );
+        );
       allow update: if isAuthenticated() && (
         (
           request.auth.uid == resource.data.ownerId &&
@@ -176,11 +189,19 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharedReminderId', 'updatedAt'])
         )
       );
-      // A member only ever deletes their OWN copy of a message (the client
-      // sends the document it just rendered, always owned by the caller), so
-      // nobody can remove the original message or another member's copy.
+      // Two ways to delete a message document:
+      //  · your own copy (`ownerId == uid`): every member can drop a message
+      //    from their own account — including the author dropping the original.
+      //  · a copy I sent (`sharedFrom == uid`): only the author can retract the
+      //    message for everyone. Copies carry the sender's uid in sharedFrom,
+      //    so no member can ever remove another member's copy, nor the
+      //    original of someone else. `.get()` keeps legacy documents without
+      //    the field readable instead of erroring the whole delete.
       allow delete: if isAuthenticated()
-        && request.auth.uid == resource.data.ownerId;
+        && (
+          request.auth.uid == resource.data.ownerId ||
+          request.auth.uid == resource.data.get('sharedFrom', null)
+        );
     }
 
     // Shared reminders log
@@ -205,6 +226,7 @@ service cloud.firestore {
       );
       allow create: if isAuthenticated()
         && request.auth.uid == request.resource.data.fromUserId
+        && hasValidExpiry(request.resource.data)
         && groupContainsUsers(
           request.resource.data.groupId,
           request.resource.data.fromUserId,
@@ -222,8 +244,14 @@ service cloud.firestore {
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharedReminderId', 'updatedAt'])
           )
         );
+      // Only the two parties of the share may remove its log (the sender when
+      // retracting the message, the recipient when discarding it). Group
+      // membership alone no longer grants deletion.
       allow delete: if isAuthenticated()
-        && isGroupMember(resource.data.groupId);
+        && (
+          request.auth.uid == resource.data.get('fromUserId', null) ||
+          request.auth.uid == resource.data.get('toUserId', null)
+        );
     }
 
   }

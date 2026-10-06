@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useReminders } from '../context/RemindersContext'
 import { subscribeToUserGroups } from '../services/groupsService'
-import { createReminder, deleteReminder, markThreadAsRead, replyToMessage, sendMessageToGroup, updateReminder } from '../services/remindersService'
+import { createReminder, deleteReminder, markThreadAsRead, replyToMessage, retractMessageForEveryone, sendMessageToGroup, updateReminder } from '../services/remindersService'
 import ReminderCard from '../components/reminders/ReminderCard'
 import ReminderForm from '../components/reminders/ReminderForm'
 import Modal from '../components/shared/Modal'
@@ -118,6 +118,17 @@ export default function HomePage() {
     }
   }
 
+  // Opción solo para el autor de un mensaje de grupo: borra el original y
+  // todas las copias del resto de miembros.
+  const handleRetract = async (message) => {
+    try {
+      await retractMessageForEveryone(user.uid, message)
+      toast.success('Mensaje retirado para todo el grupo')
+    } catch (error) {
+      toast.error(error.message || 'No se pudo retirar el mensaje')
+    }
+  }
+
   const getThreadColor = (threadId) => {
     const value = String(threadId || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
     return COLORS[value % COLORS.length]
@@ -178,6 +189,7 @@ export default function HomePage() {
           reminder={message}
           onEdit={setEditTarget}
           onDelete={handleDelete}
+          onRetract={handleRetract}
           onReply={message.groupId ? setReplyTarget : null}
           onOpen={onOpen}
           threadColor={threadColor}
