@@ -8,7 +8,7 @@ import {
   onAuthStateChanged,
   fetchSignInMethodsForEmail
 } from 'firebase/auth'
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from './firebase'
 
 const googleProvider = new GoogleAuthProvider()
@@ -95,6 +95,11 @@ export const createUserProfile = async (user, extra = {}) => {
 export const getUserProfile = async (uid) => {
   const snap = await getDoc(doc(db, 'users', uid))
   return snap.exists() ? { id: snap.id, ...snap.data() } : null
+}
+
+// Ajustes del propio usuario (p. ej. días de retención de mensajes)
+export const updateUserSettings = async (uid, settings) => {
+  await updateDoc(doc(db, 'users', uid), settings)
 }
 
 export const onAuthChange = (callback) => onAuthStateChanged(auth, callback)

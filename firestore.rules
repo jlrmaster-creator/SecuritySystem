@@ -77,7 +77,7 @@ service cloud.firestore {
         && request.auth.uid == userId
         && request.resource.data.uid == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'displayName', 'photoURL', 'groups', 'email', 'uid', 'createdAt'
+          'displayName', 'photoURL', 'groups', 'email', 'uid', 'createdAt', 'retentionDays'
         ]);
       allow delete: if false;
     }

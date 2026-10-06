@@ -193,6 +193,80 @@ export const retractMessageForEveryone = async (userId, message) => {
   return copies.size
 }
 
+// ── CLEANUP (borrado manual desde el perfil) ────────────
+// El plan gratuito de Firestore no admite políticas TTL, así que la retención
+// la aplica cada usuario: borra sus propios documentos (mensajes escritos y
+// copias recibidas) con más de N días. Los mensajes que otros escribieron se
+// limpian cuando cada persona ejecuta su propia limpieza.
+export const deleteOldMessages = async (userId, days) => {
+  const retentionDays = Math.max(1, Math.floor(Number(days) || 7))
+  const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000
+
+  const toMillis = (value) => {
+    if (!value) return 0
+    if (typeof value.toMillis === 'function') return value.toMillis()
+    if (Number.isFinite(value.seconds)) return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1000000)
+    const parsed = new Date(value).getTime()
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+  const isExpired = (value) => {
+    const millis = toMillis(value)
+    return millis > 0 && millis < cutoff
+  }
+
+  // Firestore limita cada lote a 500 operaciones.
+  const deleteInBatches = async (refs) => {
+    let deleted = 0
+    let batch = writeBatch(db)
+    let pending = 0
+    for (const ref of refs) {
+      batch.delete(ref)
+      pending += 1
+      if (pending === 500) {
+        await batch.commit()
+        deleted += pending
+        batch = writeBatch(db)
+        pending = 0
+      }
+    }
+    if (pending > 0) {
+      await batch.commit()
+      deleted += pending
+    }
+    return deleted
+  }
+
+  const messages = await getDocs(query(
+    collection(db, 'reminders'),
+    where('ownerId', '==', userId)
+  ))
+  const messageRefs = messages.docs
+    .filter(snap => isExpired(snap.data().createdAt))
+    .map(snap => snap.ref)
+  const deletedMessages = await deleteInBatches(messageRefs)
+
+  // Los registros de envío (sharedReminders) son metadatos de esos mensajes:
+  // se limpian después y de forma tolerante a fallos, porque mientras no se
+  // publiquen las reglas nuevas el borrado puede ser rechazado.
+  let deletedLogs = 0
+  try {
+    const [sent, received] = await Promise.all([
+      getDocs(query(collection(db, 'sharedReminders'), where('fromUserId', '==', userId))),
+      getDocs(query(collection(db, 'sharedReminders'), where('toUserId', '==', userId)))
+    ])
+    const logRefs = [...new Map(
+      [...sent.docs, ...received.docs]
+        .filter(snap => isExpired(snap.data().createdAt))
+        .map(snap => [snap.id, snap.ref])
+    ).values()]
+    deletedLogs = await deleteInBatches(logRefs)
+  } catch (error) {
+    console.warn('No se pudieron limpiar los registros de envío', error)
+  }
+
+  return { deletedMessages, deletedLogs }
+}
+
 // ── SHARE ────────────────────────────────────────────────
 export const shareReminder = async (reminder, fromUserId, toUserId, groupId, toUserName) => {
   // Create reminder copy FIRST (sender can create via isShared+sharedFrom rule)
