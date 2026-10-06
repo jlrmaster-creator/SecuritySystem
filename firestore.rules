@@ -176,19 +176,11 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sharedReminderId', 'updatedAt'])
         )
       );
-      allow delete: if isAuthenticated() && (
-        canReadMessage(resource.data) &&
-        (
-          (
-            resource.data.get('groupId', null) != null &&
-            isGroupMember(resource.data.groupId)
-          ) ||
-          (
-            resource.data.get('groupId', null) == null &&
-            request.auth.uid == resource.data.ownerId
-          )
-        )
-      );
+      // A member only ever deletes their OWN copy of a message (the client
+      // sends the document it just rendered, always owned by the caller), so
+      // nobody can remove the original message or another member's copy.
+      allow delete: if isAuthenticated()
+        && request.auth.uid == resource.data.ownerId;
     }
 
     // Shared reminders log

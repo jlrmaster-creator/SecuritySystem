@@ -130,6 +130,7 @@ export default function ReminderDetail({ reminder, onEdit, onDelete, onReply, ca
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Eliminar mensaje">
         <p style={{ marginBottom: 20, color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
           ¿Estás seguro de que quieres eliminar "<strong>{reminder.title}</strong>"?
+          {reminder.groupId && ' Solo se quitará de tu cuenta: el resto del grupo conservará su copia.'}
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setConfirmOpen(false)}>
