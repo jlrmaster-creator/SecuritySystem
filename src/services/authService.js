@@ -98,8 +98,19 @@ export const getUserProfile = async (uid) => {
 }
 
 // Ajustes del propio usuario (p. ej. días de retención de mensajes)
+// Las reglas exigen que el documento resultante tenga `uid` igual al
+// identificador de la ruta, pero los documentos creados antes del 14-sep no
+// traían ese campo y quedaban imposibles de actualizar. Enviar `uid` en el
+// payload lo cumple en todos los casos, y si el documento faltara se crea.
 export const updateUserSettings = async (uid, settings) => {
-  await updateDoc(doc(db, 'users', uid), settings)
+  const userRef = doc(db, 'users', uid)
+  const payload = { ...settings, uid }
+  const snapshot = await getDoc(userRef)
+  if (snapshot.exists()) {
+    await updateDoc(userRef, payload)
+  } else {
+    await setDoc(userRef, payload)
+  }
 }
 
 export const onAuthChange = (callback) => onAuthStateChanged(auth, callback)
