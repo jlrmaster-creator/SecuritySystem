@@ -46,10 +46,10 @@ service cloud.firestore {
     // Firestore TTL policy. Older clients may still omit it — the field stays
     // optional so their writes keep working — but when sent it must be a real
     // timestamp, otherwise the TTL engine would silently skip that document.
-    function hasValidExpiry(data) {
-      return data.get('expiresAt', null) == null ||
+    function hasValidExpiry(message) {
+      return message.get('expiresAt', null) == null ||
         (
-          data.get('expiresAt', null) is timestamp
+          message.get('expiresAt', null) is timestamp
         );
     }
 
