@@ -73,9 +73,17 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.auth.uid == userId
         && request.resource.data.uid == userId;
+      // The path already proves ownership, so the `uid` field only has to be
+      // consistent WHEN it exists: documents created before the field was
+      // mandatory used to error on every single update (`Property uid is
+      // undefined on object`), which silently blocked saving settings such as
+      // `retentionDays` with no way to repair the document from the client.
       allow update: if isAuthenticated()
         && request.auth.uid == userId
-        && request.resource.data.uid == userId
+        && (
+          request.resource.data.get('uid', null) == null ||
+          request.resource.data.uid == userId
+        )
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName', 'photoURL', 'groups', 'email', 'uid', 'createdAt', 'retentionDays'
         ]);
